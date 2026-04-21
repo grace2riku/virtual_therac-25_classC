@@ -1,5 +1,103 @@
+# ========================================
+# Claude Code(AI アシスタント)関連
+# ========================================
 # Claude Code session-local scheduled task lock (session-specific, not for sharing)
 .claude/scheduled_tasks.lock
 
 # Claude Code user-local settings (per-developer, not for sharing)
 .claude/settings.local.json
+
+# ========================================
+# OS / エディタ
+# ========================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/*
+!.vscode/settings.json.example
+!.vscode/launch.json.example
+.idea/
+
+# ========================================
+# C++ ビルド成果物(Inc.1 着手以降で運用)
+# ========================================
+# CMake
+build/
+build-*/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+Testing/
+
+# オブジェクトファイル・バイナリ
+*.o
+*.obj
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+*.lib
+*.pdb
+*.ilk
+*.exp
+
+# デバッグ情報
+*.dSYM/
+*.su
+*.idb
+
+# プリコンパイル済みヘッダ
+*.gch
+*.pch
+
+# カバレッジ・プロファイル
+*.gcno
+*.gcda
+*.gcov
+coverage/
+*.profraw
+*.profdata
+
+# Sanitizer 出力
+*.asan
+*.ubsan
+*.tsan
+
+# ========================================
+# パッケージ管理
+# ========================================
+# vcpkg
+vcpkg_installed/
+
+# Conan
+conan/
+conanbuildinfo.*
+conaninfo.txt
+graph_info.json
+
+# ========================================
+# ドキュメント関連
+# ========================================
+# lychee / markdownlint のキャッシュ
+.lycheecache
+.markdownlintcache
+node_modules/
+
+# ========================================
+# ログ・一時ファイル
+# ========================================
+*.log
+*.tmp
+/tmp/
