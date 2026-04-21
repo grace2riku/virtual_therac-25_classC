@@ -1,59 +1,119 @@
-# IEC 62304 ドキュメントテンプレート(クラス C)
+# 仮想 Therac-25(Virtual Therac-25) — IEC 62304 クラス C 準拠ドキュメント作成プロジェクト
 
-[![Documentation Checks](https://github.com/grace2riku/iec62304_template/actions/workflows/docs-check.yml/badge.svg)](https://github.com/grace2riku/iec62304_template/actions/workflows/docs-check.yml)
+**本リポジトリは、IEC 62304:2006+A1:2015(JIS T 2304:2017)に基づく医療機器ソフトウェア開発プロセスの学習・参考実装を目的とした仮想プロジェクトです。**
 
-**IEC 62304:2006+A1:2015**(JIS T 2304:2017)で要求される医療機器ソフトウェアライフサイクル成果物の **Markdown テンプレート集** です。安全クラス **C**(死亡又は重傷の可能性)を前提とし、クラス A/B の要求事項も包含しています。
+実機・ハードウェアは存在せず、PC 単体で動作する仮想シミュレータ(ハードウェアモデル含む)を対象として、ソフトウェア安全クラス **C**(死亡又は重傷の可能性)の要求事項に則ったライフサイクル成果物を作成します。
 
-## 想定する使い方
+## 題材: Therac-25 と歴史的事故
 
-1. 本リポジトリを新規プロジェクト用にクローン or フォーク
-2. 各テンプレートの `{{製品名}}` / `{{YYYY-MM-DD}}` などのプレースホルダを自プロジェクトの値で置換
-3. Pull Request ベースでドキュメント変更を運用(承認記録・差分レビューが自動的に残る)
-4. リリース毎にタグを打ち、各書類のバージョンをベースラインとして凍結
+Therac-25 は 1982 年に AECL(Atomic Energy of Canada Limited)が開発した放射線治療装置(医療用リニアアクセラレータ)です。高エネルギーの透過性放射線を患者の患部に照射し、周囲の正常組織を傷つけることなく、がん細胞を破壊することを目的として開発されました。
 
-## 収録ドキュメント
+しかし、**1985 年 6 月から 1987 年 1 月にかけて、米国・カナダの医療機関において計 6 件の放射線過剰照射事故が発生し、6 名の患者が重症または死亡に至りました**。推定被曝線量は処方量の 100 倍以上に達したケースもあり、医療機器ソフトウェアの安全性を論じるうえで最も著名な事例となっています。
+
+主な技術的要因として以下が報告されています(N. G. Leveson, C. S. Turner, "An Investigation of the Therac-25 Accidents", IEEE Computer, 1993 ほか)。
+
+- ハードウェアインターロック(Therac-6/20 までは機械式連動)を廃止し、ソフトウェア単独で安全機能を実現した設計判断
+- 操作者入力処理とビーム設定間の **タイミング競合(race condition)** により、電子ビーム用高出力モードのまま X 線ターゲットが挿入されない状態でビーム照射
+- 共有変数のカウンタ・オーバーフローによる安全チェックのバイパス
+- 旧機種(Therac-6/20)のコード再利用の際に、依存していたハードウェアインターロックが失われた前提の見直し漏れ
+- 暗号的なエラーメッセージ(例: "MALFUNCTION 54")と、操作者による「P」キー押下でのバイパス常態化
+- ソフトウェア起因のハザード解析・FMEA / FTA の欠如、独立レビューの不在
+- 単独開発者による安全クリティカルコードの実装
+
+**本プロジェクトは、Therac-25 の事故を IEC 62304 のプロセスに照らし直し、「どの成果物・どの活動があれば事故は避けられたか」を追体験することを狙います。**
+
+## 目的
+
+- IEC 62304 の開発プロセス(箇条 5)、保守(箇条 6)、リスクマネジメント(箇条 7)、構成管理(箇条 8)、問題解決(箇条 9)の各プロセスを、実プロジェクトと同等の粒度で体験・文書化する。
+- Therac-25 という歴史的な公知事例を題材に、クラス C 特有の要求事項(箇条 5.3.5 / 5.4.2〜5.4.4 / 5.5.4 / 5.7.4)の意義と実装を学ぶ。
+- Markdown + Git + Pull Request ベースのドキュメント運用を実践する。
+
+## 対象製品の概要
+
+| 項目 | 内容 |
+|------|------|
+| 製品名 | 仮想 Therac-25(Virtual Therac-25) |
+| 型式 | TH25-SIM-001 |
+| ソフトウェア名称 | Therac-25 Virtual Control Software(TH25-CTRL) |
+| ソフトウェア安全クラス | **C**(IEC 62304) |
+| 実装言語 | **C++20**(PC 単独動作の仮想シミュレータ) |
+| ライフサイクルモデル | V字モデル(インクリメンタル方式) |
+| 開発インクリメント(予定) | Inc.1 ビーム生成・モード制御コア → Inc.2 インターロック/安全監視 → Inc.3 タスク同期・タイミング保証 → Inc.4 操作者 UI・エラー報告・ロギング |
+
+### スコープの補足
+
+- 本プロジェクトは学習目的の **仮想実装** であり、実ビーム・高電圧・磁場は扱わない。ハードウェア(電子銃、ベンディング磁石、ターゲット、コリメータ、ターンテーブル、イオンチェンバ、ドーズモニタ、インターロックスイッチ)は C++ によるソフトウェアモデルで置換する。
+- 安全クラスの判定は、**仮に本ソフトウェアが実機の Therac-25 相当機に搭載されたと仮定した場合**の危害重大度に基づいて行う(詳細は [SSC-TH25-001](./7_software_risk_management_process/software_safety_class_determination_record.md) を参照)。
+
+## ベース
+
+本プロジェクトは [grace2riku/iec62304_template](https://github.com/grace2riku/iec62304_template) をベースとし、同テンプレートの構造・雛形を継承しています。また、姉妹プロジェクトである [grace2riku/virtual_infusion_pump_classC](https://github.com/grace2riku/virtual_infusion_pump_classC) の運用ルール(`DEVELOPMENT_STEPS.md` 更新義務、`PRB-` プレフィックス、単独開発下の独立性擬制)も踏襲しています。テンプレート本体の更新は `upstream` remote から随時確認可能です。
+
+## ドキュメント進捗
 
 ### 箇条 5 ソフトウェア開発プロセス
 
-| 箇条 | ドキュメント | ファイル |
-|------|-----------|--------|
-| 5.1 | ソフトウェア開発計画書 | [`5.1_.../software_development_plan.md`](./5.1_software_development_planning/software_development_plan.md) |
-| 5.2 | ソフトウェア要求仕様書 | [`5.2_.../software_requirements_specification.md`](./5.2_software_requirements_analysis/software_requirements_specification.md) |
-| 5.3 | ソフトウェアアーキテクチャ設計書 | [`5.3_.../software_architecture_design.md`](./5.3_software_architecture_design/software_architecture_design.md) |
-| 5.4 | ソフトウェア詳細設計書 | [`5.4_.../software_detailed_design.md`](./5.4_software_detailed_design/software_detailed_design.md) |
-| 5.5 | ユニットテスト計画書/報告書 | [`5.5_.../software_unit_test_plan_report.md`](./5.5_software_unit_implementation/software_unit_test_plan_report.md) |
-| 5.6 | 結合試験計画書/報告書 | [`5.6_.../software_integration_test_plan_report.md`](./5.6_software_integration_testing/software_integration_test_plan_report.md) |
-| 5.7 | システム試験計画書/報告書 | [`5.7_.../software_system_test_plan_report.md`](./5.7_software_system_testing/software_system_test_plan_report.md) |
-| 5.8 | ソフトウェアマスタ仕様書 | [`5.8_.../software_master_specification.md`](./5.8_software_release/software_master_specification.md) |
+| 箇条 | ドキュメント | ファイル | 状態 |
+|------|-----------|--------|------|
+| 5.1 | ソフトウェア開発計画書(SDP) | [`5.1_.../software_development_plan.md`](./5.1_software_development_planning/software_development_plan.md) | 🟡 v0.1 骨子(テンプレートから派生・製品固有化) |
+| 5.2 | ソフトウェア要求仕様書(SRS) | [`5.2_.../software_requirements_specification.md`](./5.2_software_requirements_analysis/software_requirements_specification.md) | ⬜ 未着手(テンプレートのみ) |
+| 5.3 | ソフトウェアアーキテクチャ設計書 | [`5.3_.../software_architecture_design.md`](./5.3_software_architecture_design/software_architecture_design.md) | ⬜ 未着手(テンプレートのみ) |
+| 5.4 | ソフトウェア詳細設計書 | [`5.4_.../software_detailed_design.md`](./5.4_software_detailed_design/software_detailed_design.md) | ⬜ 未着手(テンプレートのみ) |
+| 5.5 | ユニット試験計画書/報告書 | [`5.5_.../software_unit_test_plan_report.md`](./5.5_software_unit_implementation/software_unit_test_plan_report.md) | ⬜ 未着手(テンプレートのみ) |
+| 5.6 | 結合試験計画書/報告書 | [`5.6_.../software_integration_test_plan_report.md`](./5.6_software_integration_testing/software_integration_test_plan_report.md) | ⬜ 未着手(テンプレートのみ) |
+| 5.7 | システム試験計画書/報告書 | [`5.7_.../software_system_test_plan_report.md`](./5.7_software_system_testing/software_system_test_plan_report.md) | ⬜ 未着手(テンプレートのみ) |
+| 5.8 | ソフトウェアマスタ仕様書 | [`5.8_.../software_master_specification.md`](./5.8_software_release/software_master_specification.md) | ⬜ 未着手(テンプレートのみ) |
 
 ### 箇条 6〜9 ライフサイクルプロセス
 
-| 箇条 | ドキュメント | ファイル |
-|------|-----------|--------|
-| 6 保守 | ソフトウェア保守計画書 | [`6_.../software_maintenance_plan.md`](./6_software_maintenance_process/software_maintenance_plan.md) |
-| 7 リスク | ソフトウェアリスクマネジメント計画書 | [`7_.../software_risk_management_plan.md`](./7_software_risk_management_process/software_risk_management_plan.md) |
-| 7 リスク | ソフトウェア安全クラス決定記録 | [`7_.../software_safety_class_determination_record.md`](./7_software_risk_management_process/software_safety_class_determination_record.md) |
-| 7 リスク | リスクマネジメントファイル(ISO 14971) | [`7_.../risk_management_file.md`](./7_software_risk_management_process/risk_management_file.md) |
-| 8 構成管理 | ソフトウェア構成管理計画書 | [`8_.../software_configuration_management_plan.md`](./8_software_configuration_management_process/software_configuration_management_plan.md) |
-| 8 構成管理 | 構成アイテム一覧 | [`8_.../configuration_item_list.md`](./8_software_configuration_management_process/configuration_item_list.md) |
-| 8 構成管理 | CCB 運用規程 | [`8_.../ccb_operating_rules.md`](./8_software_configuration_management_process/ccb_operating_rules.md) |
-| 8 構成管理 | 変更要求台帳 | [`8_.../change_request_register.md`](./8_software_configuration_management_process/change_request_register.md) |
-| 9 問題解決 | ソフトウェア問題解決手順書 | [`9_.../software_problem_resolution_procedure.md`](./9_software_problem_resolution_process/software_problem_resolution_procedure.md) |
+| 箇条 | ドキュメント | ファイル | 状態 |
+|------|-----------|--------|------|
+| 6 保守 | ソフトウェア保守計画書(SMP) | [`6_.../software_maintenance_plan.md`](./6_software_maintenance_process/software_maintenance_plan.md) | ⬜ 未着手(テンプレートのみ) |
+| 7 リスク | ソフトウェアリスクマネジメント計画書(SRMP) | [`7_.../software_risk_management_plan.md`](./7_software_risk_management_process/software_risk_management_plan.md) | ⬜ 未着手(テンプレートのみ) |
+| 7 リスク | ソフトウェア安全クラス決定記録(SSC) | [`7_.../software_safety_class_determination_record.md`](./7_software_risk_management_process/software_safety_class_determination_record.md) | 🟡 v0.1(クラス C 決定、Therac-25 事故事例に基づく根拠記録済み) |
+| 7 リスク | リスクマネジメントファイル(RMF, ISO 14971) | [`7_.../risk_management_file.md`](./7_software_risk_management_process/risk_management_file.md) | ⬜ 未着手(テンプレートのみ) |
+| 8 構成管理 | ソフトウェア構成管理計画書(SCMP) | [`8_.../software_configuration_management_plan.md`](./8_software_configuration_management_process/software_configuration_management_plan.md) | ⬜ 未着手(テンプレートのみ) |
+| 8 構成管理 | 構成アイテム一覧(CIL) | [`8_.../configuration_item_list.md`](./8_software_configuration_management_process/configuration_item_list.md) | ⬜ 未着手(テンプレートのみ) |
+| 8 構成管理 | CCB 運用規程 | [`8_.../ccb_operating_rules.md`](./8_software_configuration_management_process/ccb_operating_rules.md) | ⬜ 未着手(テンプレートのみ) |
+| 8 構成管理 | 変更要求台帳 | [`8_.../change_request_register.md`](./8_software_configuration_management_process/change_request_register.md) | ⬜ 未着手(テンプレートのみ) |
+| 9 問題解決 | ソフトウェア問題解決手順書(SPRP) | [`9_.../software_problem_resolution_procedure.md`](./9_software_problem_resolution_process/software_problem_resolution_procedure.md) | ⬜ 未着手(テンプレートのみ) |
 
 ### 補助
 
 | 目的 | ファイル |
 |------|--------|
+| **開発ステップ記録(お手本用)** | [`DEVELOPMENT_STEPS.md`](./DEVELOPMENT_STEPS.md) |
+| 上流テンプレートへのフィードバック記録 | [`UPSTREAM_FEEDBACK.md`](./UPSTREAM_FEEDBACK.md) |
 | 条項別 監査チェックリスト | [`compliance/audit_checklist.md`](./compliance/audit_checklist.md) |
 | 作業・編集ガイド(AI 支援含む) | [`CLAUDE.md`](./CLAUDE.md) |
 
-## 特徴
+## 技術スタック(予定)
 
-- **クラス C 完全対応**: 箇条 5.3.5(分離)、5.4.2〜5.4.4(詳細設計)、5.5.4(追加ユニット受入基準)、5.7.4(試験妥当性確認)を漏れなく収録
-- **トレーサビリティ骨格**: `SRS- / ARCH- / SDD- / UNIT- / UT- / IT- / ST- / RCM- / HZ-` など統一 ID 体系と、各書類のトレーサビリティマトリクス
-- **箇条 5〜9 まで網羅**: 開発だけでなく保守・リスクマネジメント・構成管理・問題解決プロセスを同一リポジトリで一元管理
-- **Git/PR 運用前提**: Markdown ベースで差分レビュー・承認記録・ベースライン凍結が自然に行える
-- **監査対応**: 条項番号単位の対応表で、1 行ずつの規格適合性を確認可能
+| カテゴリ | ツール |
+|---------|-------|
+| 言語 | C++20 |
+| ビルド | CMake 3.28+ / Ninja |
+| パッケージ管理 | vcpkg もしくは Conan(Inc.1 着手時に確定) |
+| 静的解析 | clang-tidy / cppcheck / Include-What-You-Use |
+| 動的解析 | AddressSanitizer / UndefinedBehaviorSanitizer / ThreadSanitizer |
+| 試験 | GoogleTest / GoogleMock / libFuzzer |
+| 網羅率 | llvm-cov(MC/DC 相当の分岐網羅を目標) |
+| コーディング規約 | MISRA C++ 2023(可能な範囲)+ CERT C++ Secure Coding |
+| 構成管理 | Git / GitHub |
+| CI | GitHub Actions |
+| ドキュメント検証 | markdownlint-cli2 / lychee |
+
+詳細は SDP §6.2 および 構成アイテム一覧(CIL)を参照(今後追補)。
+
+## 開発プロセスの方針
+
+- **V字モデル(インクリメンタル方式)** を採用し、機能単位で V字サイクルを一周する。各インクリメントは Therac-25 事故の主要因に対応させ、事故を防ぐ設計・検証活動を段階的に積み上げる。
+- **テスト駆動開発(TDD)** を原則とし、MISRA C++ + 静的/動的解析 + 徹底したユニット試験で品質を担保する。
+- **スレッド/タスク間の競合解析(TSan、モデル検査)** をクラス C 固有要求事項 5.4.x / 5.7.4 の要として扱う(Therac-25 の直接原因が race condition であったため)。
+- **Pull Request + GitHub Actions CI** による自動検証で、単独開発下でも機械的独立性を確保する(Therac-25 における「単独開発者+独立レビュー欠如」を意図的に擬制で補う)。
+- ベースラインは Inc. 完了時およびリリース時にタグで凍結する。
+
+詳細は [SDP(SDP-TH25-001)](./5.1_software_development_planning/software_development_plan.md) を参照。
 
 ## CI(GitHub Actions)
 
@@ -64,99 +124,46 @@ Pull Request・push ごとに以下を自動検証します(`.github/workflows/d
 3. 内部リンク切れ検出(`lychee`、オフラインモード)
 4. 日付書式(ISO 8601 `YYYY-MM-DD` 強制)
 
-ローカルで事前確認したい場合は以下を実行します:
+ローカルで事前確認する場合:
 
 ```bash
 npx markdownlint-cli2 "**/*.md"
 lychee --offline --include-fragments './**/*.md'
 ```
 
-## 派生プロジェクトでの初期セットアップ
-
-### 1. `gh` のデフォルトリポジトリ設定(重要)
-
-本テンプレートを `git clone` → `.git` 削除 → `git init` → 新リポジトリとして派生運用する場合や、`upstream` リモートを残してフォーク運用する場合、`gh` コマンドのデフォルトリポジトリ解決が **upstream(本テンプレート側)を向いてしまう** ことがあります。この状態で `gh issue view 1` や `gh run list` を実行すると、本来見たい派生リポジトリではなく upstream の情報が返り、CI 状態や Issue 状況の **誤認に直結** します(監査時に「CI が通っていない」と誤判定する事故事例あり)。
-
-リポジトリ作成直後に、以下のいずれかを徹底してください。
-
-**(推奨)デフォルトリポジトリを明示的に固定する:**
-
-```bash
-gh repo set-default <owner>/<your-derived-repo>
-```
-
-**または、すべての `gh` コマンドで `--repo`(`-R`)を明示する:**
-
-```bash
-gh issue list  --repo <owner>/<your-derived-repo>
-gh run list    --repo <owner>/<your-derived-repo>
-gh pr checks N --repo <owner>/<your-derived-repo>
-```
-
-CI 状態の確認は特に誤認の影響が大きいため、`gh run list --repo <自リポジトリ>` を必ず明示することを推奨します。
-
-### 2. GitHub ラベルの作成
-
-派生プロジェクトで Issue テンプレート(問題報告 PRB / 変更要求 CR)を運用する場合、テンプレートの `labels` frontmatter で参照される GitHub ラベルが事前に存在する必要があります(未登録だと `gh issue create --label ...` がエラー終了)。リポジトリ作成直後に以下を実行してください。
-
-```bash
-./scripts/setup_labels.sh                   # カレントディレクトリのリポジトリに作成
-./scripts/setup_labels.sh -R owner/repo     # 別リポジトリを指定
-```
-
-作成されるラベル:
-
-| ラベル | 色 | 用途 |
-|-------|----|------|
-| `change-request` | `#0366d6` | 変更要求(SCMP / CCB に基づく)|
-| `problem-report` | `#d73a4a` | 問題報告(SPRP に基づく)|
-
-`gh` CLI(認証済み)が必要です。スクリプトは冪等に動作し、既存ラベルは色・説明を更新します。
-
-### 3. CI 必須チェックの設定(Branch Protection)
-
-**安全クリティカルなクラス C 開発では、CI 失敗を放置したまま次ステップへ進行することは監査時のプロセス外進行リスク** となります(派生プロジェクトで軽微な lint エラーを 5 ステップ連続で見落とした事例あり)。`docs-check.yml` を Branch Protection Rule の required status checks に登録し、**CI が通らない限り PR をマージできない状態** にしてください。
-
-GitHub CLI が admin 権限で認証済みであれば、以下を実行するだけで設定できます。
-
-```bash
-./scripts/setup_branch_protection.sh                 # カレントリポジトリの main
-./scripts/setup_branch_protection.sh -R owner/repo   # 別リポジトリを指定
-./scripts/setup_branch_protection.sh -b develop      # 別ブランチを指定
-```
-
-このスクリプトは `docs-check.yml` の 4 ジョブ(構造・lint・リンク・日付書式)を必須チェックとして登録し、`main` への force push / 削除を禁止します。ソロ開発・小規模チームでも使えるよう、PR レビュー必須化と管理者への強制適用は **行いません**(必要に応じて GitHub Web UI で追加してください)。
-
-**手動で設定したい場合:** `Settings` → `Branches` → `Add rule` → `Branch name pattern: main` →「Require status checks to pass before merging」で上記 4 ジョブを指定してください。
-
-### 4. CI 失敗時の運用ルール(推奨)
-
-- CI 失敗は **次ステップ進行前に必ず修正** する(原因切り分け、該当ドキュメントの修正、再 push)
-- 複数ステップに渡る長期放置は、監査時に「プロセス外進行」と指摘されるリスクがある
-- `gh pr checks <PR番号>` / `gh run list --limit 5` で定期的に CI 状態を確認する
-- Slack / Microsoft Teams / メール通知を組織ごとに設定する(GitHub 公式 [notification docs](https://docs.github.com/en/actions/monitoring-and-troubleshooting-workflows/using-workflow-run-logs) 参照)
+コード用の CI(CMake ビルド、GoogleTest、clang-tidy、各 Sanitizer、llvm-cov 等)は Inc.1 実装開始時に追加予定。
 
 ## 関連規格
 
 | 規格 | 用途 |
 |------|------|
-| IEC 62304:2006+A1:2015 / JIS T 2304:2017 | 本テンプレートの直接の根拠 |
-| ISO 14971:2019 | リスクマネジメント(箇条 7 と RMF で参照) |
+| IEC 62304:2006+A1:2015 / JIS T 2304:2017 | 本プロジェクトの直接の根拠 |
+| ISO 14971:2019 | リスクマネジメント(箇条 7、RMF で参照) |
 | ISO 13485:2016 | 品質マネジメントシステム(保守プロセスで連携) |
-| IEC 62366-1 | ユーザビリティエンジニアリング |
-| IEC 60601-1-8 | アラームシステム |
-| IEC 80001-1 | IT ネットワーク適用のリスクマネジメント |
-| IEC 81001-5-1 | ヘルスソフトウェアのセキュリティ |
-| AAMI TIR57 | 医療機器セキュリティのリスクマネジメント原則 |
+| IEC 60601-2-1 | 電子加速器型医用電気機器の安全性・基本性能(Therac-25 相当機の個別規格) |
+| IEC 62366-1 | ユーザビリティエンジニアリング(操作者入力の確定・エラー表示) |
+| IEC 60601-1-8 | アラームシステム(インターロック逸脱時の通知) |
+| AAMI TIR45:2012 | アジャイル/インクリメンタル開発の医療機器ソフトウェアへの適用 |
+| AAMI TIR57:2016 | 医療機器セキュリティのリスクマネジメント原則 |
+| ISO/IEC 25010 | ソフトウェア品質モデル(信頼性・保守性の属性評価) |
+
+## 参考文献(Therac-25 事故解析)
+
+- N. G. Leveson, C. S. Turner. "An Investigation of the Therac-25 Accidents." IEEE Computer, 26(7):18-41, 1993.
+- N. G. Leveson. *Safeware: System Safety and Computers*. Addison-Wesley, 1995.(Appendix A に Therac-25 詳細)
+- FDA 21 CFR 1020.40(医用電子加速器)および関連通達
 
 ## 免責事項
 
-本テンプレートは **参考実装** であり、各組織・各製品固有の規制要求・品質システム・リスク受容基準に従った調整が必要です。本テンプレートの使用による規制適合を保証するものではありません。実運用前に **規格原本との 1 行ずつの照合**(`compliance/audit_checklist.md` を活用)と、**QMS 責任者・RA 責任者のレビュー** を推奨します。
-
-## 貢献
-
-Issue・Pull Request ともに歓迎します。テンプレート改善の提案時は、可能であれば対応する IEC 62304 条項番号を明記してください。
+- 本プロジェクトは **学習目的の仮想プロジェクト** であり、実在の医療機器ではありません。
+- Therac-25 は実在した装置ですが、本リポジトリの成果物は、当時の AECL 社の公式文書ではなく、公開事故報告書・学術文献に基づく **再構成・学習用の仮想成果物** です。特定製品の規制適合や事故再評価を保証するものではありません。
+- 実運用前には各組織の品質マネジメントシステム・リスク受容基準・規制要求に従った調整と、QMS/RA 責任者の正式レビューが必要です。
+- 医療的判断・放射線治療計画・被曝線量評価に本ソフトウェアを使用しないでください。
 
 ## ライセンス
 
-{{ライセンス未設定 — プロジェクトに適したライセンスを LICENSE ファイルとして追加してください}}
+未設定(今後決定予定)。
+
+## 参考: 元テンプレートの README
+
+本プロジェクトのベースとなっているテンプレートの詳細は [grace2riku/iec62304_template](https://github.com/grace2riku/iec62304_template) を参照してください。
