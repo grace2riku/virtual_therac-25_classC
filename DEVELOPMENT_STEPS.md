@@ -19,7 +19,7 @@
 | ライフサイクルモデル | V字モデル(インクリメンタル方式) |
 | テンプレート | [grace2riku/iec62304_template](https://github.com/grace2riku/iec62304_template) |
 | 姉妹プロジェクト | [grace2riku/virtual_infusion_pump_classC](https://github.com/grace2riku/virtual_infusion_pump_classC)(運用ルールを踏襲) |
-| リポジトリ | 未公開(GitHub 作成予定) |
+| リポジトリ | <https://github.com/grace2riku/virtual_therac-25_classC>(2026-04-21 作成、Public) |
 | 題材の歴史的背景 | Therac-25 は 1985-1987 年に米国・カナダで 6 件の放射線過剰照射事故を起こした実在の装置(AECL、1982 発売)。本プロジェクトは事故原因を IEC 62304 プロセスで予防する方法を学ぶための仮想プロジェクト |
 
 ## 全体戦略(フェーズ区分)
@@ -63,7 +63,7 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 作業日 | 2026-04-21 |
 | 作業内容 | `grace2riku/iec62304_template` のローカル clone から `rsync`(`.git`・`.DS_Store`・`.claude` を除外)で内容を複製し、`/Users/k-abe/github/virtual_therac-25_classC/` に展開。独立リポジトリとして `git init` を行う前提 |
 | 成果物 | リポジトリ骨格(テンプレート 24 ファイル + 製品固有ファイル 2 件) |
-| コミット | (未実施、Step 4 完了時に初回コミット予定) |
+| コミット | `0012fb1` — chore: iec62304_template をベースとしてプロジェクト初期化 |
 
 **採用根拠:**
 
@@ -82,7 +82,7 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 作業日 | 2026-04-21 |
 | 作業内容 | Therac-25 の公知事故(Leveson & Turner 1993)に基づくハザード 10 件を列挙(電子/X 線モード不整合、race condition、整数オーバフロー、インターロック検知失敗、線量計算誤り、暗号的エラー・バイパス UI、旧コード再利用、ドーズモニタ処理、電源再起動、権限管理)し、**クラス C** と決定。最悪シナリオは実事故で現実化済みである旨を明記 |
 | 成果物 | `7_software_risk_management_process/software_safety_class_determination_record.md`(SSC-TH25-001 v0.1) |
-| コミット | (Step 4 完了時に初回コミット予定) |
+| コミット | `1a7c392` — docs(7): ソフトウェア安全クラス決定記録を作成 |
 
 **採用根拠(なぜ SDP より先に SSC か):**
 
@@ -100,7 +100,7 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 作業日 | 2026-04-21 |
 | 作業内容 | テンプレート `software_development_plan.md` の製品固有欄(ID・表紙・対象製品)を埋め、ライフサイクルモデル(V字+インクリメンタル)、インクリメント分割(Inc.1〜4)、言語(C++20)、ツールチェイン(CMake・clang-tidy・GoogleTest・各 Sanitizer)、共通欠陥類型(Therac-25 事故要因との対応表)を記入 |
 | 成果物 | `5.1_software_development_planning/software_development_plan.md`(SDP-TH25-001 v0.1 骨子) |
-| コミット | (Step 4 完了時に初回コミット予定) |
+| コミット | `09bbe64` — docs(5.1): ソフトウェア開発計画書を作成 |
 
 **採用根拠:**
 
@@ -117,7 +117,7 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 作業日 | 2026-04-21 |
 | 作業内容 | テンプレートの `README.md` を仮想 Therac-25 プロジェクトとして書き換え、事故背景・スコープ・ドキュメント進捗表・技術スタック(C++20)・関連規格・参考文献を記載。`CLAUDE.md` 末尾に本プロジェクト固有ルール(Therac-25 事故要因の第一原理、C++20 固定、`PRB-` プレフィックス、単独開発下の独立性擬制、DEVELOPMENT_STEPS 更新義務)を追記 |
 | 成果物 | `README.md`(v0.1)、`CLAUDE.md`(v0.1、追記) |
-| コミット | (Step 4 完了時に初回コミット予定) |
+| コミット | `916f6a4` — docs: README・CLAUDE.md を本プロジェクト向けに改訂 |
 
 **採用根拠:**
 
@@ -126,14 +126,14 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 
 ---
 
-### Step 4 — 運用ドキュメント(DEVELOPMENT_STEPS.md / UPSTREAM_FEEDBACK.md)の整備 ← **(本 Step を追記中)**
+### Step 4 — 運用ドキュメント(DEVELOPMENT_STEPS.md / UPSTREAM_FEEDBACK.md)・`.github`・`.gitignore` の整備
 
 | 項目 | 内容 |
 |------|------|
 | 作業日 | 2026-04-21 |
-| 作業内容 | 姉妹プロジェクト `virtual_infusion_pump_classC` の運用ルールを踏襲し、開発ステップ記録(本書)と upstream テンプレートへのフィードバック台帳(`UPSTREAM_FEEDBACK.md`)を作成 |
-| 成果物 | `DEVELOPMENT_STEPS.md`(v0.1)、`UPSTREAM_FEEDBACK.md`(v0.1、空台帳) |
-| コミット | (初回コミットに含む予定) |
+| 作業内容 | 姉妹プロジェクト `virtual_infusion_pump_classC` の運用ルールを踏襲し、開発ステップ記録(本書)と upstream テンプレートへのフィードバック台帳(`UPSTREAM_FEEDBACK.md`)、GitHub Issue/PR テンプレート、`.gitignore` の C++ 版拡充を実施 |
+| 成果物 | `DEVELOPMENT_STEPS.md`(v0.1)、`UPSTREAM_FEEDBACK.md`(v0.1、空台帳)、`.github/ISSUE_TEMPLATE/config.yml`、`.github/ISSUE_TEMPLATE/problem_report.md`、`.github/ISSUE_TEMPLATE/change_request.md`、`.github/pull_request_template.md`、`.gitignore`(C++ ビルド成果物を追加) |
+| コミット | `f8aa4d4`(.github + .gitignore)、`6345797`(DEVELOPMENT_STEPS + UPSTREAM_FEEDBACK) |
 
 **採用根拠:**
 
@@ -160,3 +160,4 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | バージョン | 日付 | 変更内容 | 変更者 |
 |----------|------|---------|--------|
 | 0.1 | 2026-04-21 | 初版作成(Step 0〜4 を記録) | k-abe |
+| 0.2 | 2026-04-22 | Step 0〜4 の関連コミット SHA を実績値に更新、リポジトリ URL を記入、Step 4 に `.github` / `.gitignore` 整備を追記 | k-abe |
