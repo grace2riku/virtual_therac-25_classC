@@ -304,8 +304,8 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 |------|------|
 | 作業日 | 2026-04-24 |
 | 作業内容 | SSC-TH25-001 から HZ-001〜HZ-010 を初期ハザードとして RMF に登録し、RCM-001〜RCM-019 を計画段階で登録。**Therac-25 実事故事象シーケンス 5 件(Tyler 第 1 例 race condition / Yakima Class3 オーバフロー / East Texas MALFUNCTION 54 / インターロックデッドロック想定 / Therac-6/20 コード再利用前提喪失)を文書化**。発生可能性 P 値の根拠を「Therac-25 当時(1985-1987)の実証発現頻度」と明記し、HZ-001/002/006/007 を P5/P4 と推定して「許容外」リスクとして RCM 未実装段階のリリース不可を宣言。**RCM-018(UI 層と安全コア分離、IEC 62304 §5.3.5)・RCM-019(タスク間メッセージパッシング、共有変数排除)を構造的設計安全 RCM として強調** — Therac-25 race condition への構造的対応 |
-| 成果物 | `7_software_risk_management_process/risk_management_file.md`(RMF-TH25-001 v0.1) |
-| コミット | (本 Step コミット時に追記) |
+| 成果物 | `7_software_risk_management_process/risk_management_file.md`(RMF-TH25-001 v0.1)、CIL-TH25-001 を v0.3 に昇格(派生ドキュメント整合化) |
+| コミット | `117863a` — docs(7): リスクマネジメントファイルを作成 (RMF-TH25-001 v0.1, Step 11) |
 
 **採用根拠:**
 
