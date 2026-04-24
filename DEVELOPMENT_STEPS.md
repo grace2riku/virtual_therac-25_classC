@@ -359,7 +359,7 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 作業日 | 2026-04-25 |
 | 作業内容 | Phase 3(インフラ整備期)完了確認を実施し、SCMP-TH25-001 §5.1 に従い `planning-baseline` タグを付与。**(1) CI 検証:** GitHub Actions `Documentation Checks` ワークフローが Step 5〜11 の push 全件で `success`(最終は `88a3b170` 2026-04-24T14:18:35Z)であることを `gh api` で直接確認。単独開発下の機械的独立性(SCMP §4.1.1)の代替として活用。**(2) ローカル lint 環境差異の是正:** `npx markdownlint-cli2@0.22+` と CI action `DavidAnson/markdownlint-cli2-action@v16` の間で MD058(blanks-around-tables)/ MD060(table-column-style)のデフォルト検出差が常態化していたため、`.markdownlint-cli2.yaml` に両ルールの明示無効化を追加(MD022/MD031/MD032 と同じ rationale)。**(3) 派生ドキュメント追随漏れの一括修正:** Step 10/11 時点で発生していた CIL §4 DEVSTEPS バージョン表示 0.6 のまま、CRR §2 参照文書の RMF「作成予定」表示、README の CIL 状態 v0.1 のまま、をまとめて修正。**(4) CIL v0.3 → v0.4 昇格:** §10 ベースライン履歴の予定行を実確定行 `BL-20260425-001` に昇格、§10.1 に SCMP §5.2 準拠の詳細スナップショット節(ベースライン ID / Git タグ / 日付 / 含まれる全 CI とバージョン / 検証成果物 / 残存する既知の限界)を新設。**(5) CRR v0.1 → v0.2 昇格:** §2 参照文書を RMF v0.1 / CIL v0.4 に整合更新、§7 集計表に Phase 3 完了時行(全項目 0)追加、§4/§6 注記を「立ち上げ活動の範囲 Step 0〜12、本格運用 Inc.1 から」に更新。**(6) `planning-baseline` タグ付与:** 本 Step の最終コミットに付与、Git の保護タグ設定を適用(SCMP §5.3) |
 | 成果物 | `.markdownlint-cli2.yaml`(MD058/MD060 無効化追記)、CIL-TH25-001 v0.4(§10/10.1 新設 + 追随漏れ修正)、CRR-TH25-001 v0.2(§2 参照文書整合化 + §7 Phase 3 行追加 + §4/§6 注記更新)、README.md(CIL v0.4 / CRR v0.2 状態欄更新)、DEVELOPMENT_STEPS.md v0.9 → v0.10(本 Step 追記、改訂履歴 v0.10)、Git タグ `planning-baseline`(ベースライン ID `BL-20260425-001`) |
-| コミット | _(本 Step コミット時に追記)_ |
+| コミット | `e71a7c5` — docs: Phase 3 完了確認と planning-baseline 確定 (Step 12) |
 
 **採用根拠:**
 
