@@ -291,8 +291,8 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 |------|------|
 | 作業日 | 2026-04-24 |
 | 作業内容 | IEC 62304 §8.2 および SCMP-TH25-001 §4.1 に基づく CCB 運用規程と CR 台帳を整備。**CCB-TH25-001 v0.1**: 標準モデル(複数名 CCB)+ 単独開発兼任版の二重記述、GitHub Issue/PR ベース、**§5.4 で 1 分インターバルを正式定義**(学習プロジェクト特例)、§5.2 重大判定基準に Therac-25 事故主要因 5 類型(race condition / 整数オーバフロー / インターロック欠落 / バイパス UI / レガシー前提喪失)を独立項目として明示、§5.3 承認フロー図に SPRP §4.3.1 5 主要因チェックを組込、§7 審議観点に Therac-25 事故 5 主要因 A〜F の必須チェック項目を追加。**CRR-TH25-001 v0.1**: 空台帳として初期化、§3.4 記録項目に Therac-25 事故主要因類型列(A〜F)・Sanitizer 検証列を追加、§7.1 Therac-25 事故主要因類型別 CR 件数集計表(A〜F、SPRP §8.2 / SMP §4.8 と整合)を独立節として新設、§7.2 Sanitizer 関連 CR 件数集計表(TSan/ASan/UBSan/HZ-007/Pass 遵守率)を独立節として新設 |
-| 成果物 | `8_software_configuration_management_process/ccb_operating_rules.md`(CCB-TH25-001 v0.1)、`8_software_configuration_management_process/change_request_register.md`(CRR-TH25-001 v0.1) |
-| コミット | (本 Step コミット時に追記) |
+| 成果物 | `8_software_configuration_management_process/ccb_operating_rules.md`(CCB-TH25-001 v0.1)、`8_software_configuration_management_process/change_request_register.md`(CRR-TH25-001 v0.1)、CIL-TH25-001 を v0.2 に昇格(派生ドキュメント整合化) |
+| コミット | `b7bc3e7` — docs(8): CCB 運用規程と CR 台帳を作成 (CCB-TH25-001 v0.1 + CRR-TH25-001 v0.1, Step 10) |
 
 **採用根拠:**
 
