@@ -1,7 +1,7 @@
 # 構成アイテム一覧(CI List)
 
 **ドキュメント ID:** CIL-TH25-001
-**バージョン:** 0.2
+**バージョン:** 0.3
 **最終更新日:** 2026-04-24
 **対象製品:** 仮想 Therac-25(Virtual Therac-25) / TH25-SIM-001
 **対象リリース:** 0.1.0(初期開発)以降
@@ -64,9 +64,9 @@ Phase 2(支援プロセス計画期)完了時点。バージョンは 2026-04-24
 | CI-DOC-SMP | ソフトウェア保守計画書 | `6_software_maintenance_process/software_maintenance_plan.md` | 0.1 | ドラフト(セルフ承認、Step 8 で作成、Therac-25 事故主要因チェックリスト定期適用 §4.8 を組込) |
 | CI-DOC-SRMP | ソフトウェアリスクマネジメント計画書 | `7_software_risk_management_process/software_risk_management_plan.md` | 0.1 | ドラフト(セルフ承認、Step 5 で作成、3 層検証 + 2 段冗長 RCM 必須化) |
 | CI-DOC-SSC | ソフトウェア安全クラス決定記録 | `7_software_risk_management_process/software_safety_class_determination_record.md` | 0.1 | ドラフト(セルフ承認、Step 1 で作成、HZ-001〜HZ-010 確定) |
-| CI-DOC-RMF | リスクマネジメントファイル(ISO 14971) | `7_software_risk_management_process/risk_management_file.md` | — | 未着手(テンプレートのみ、Step 11 で作成予定) |
+| CI-DOC-RMF | リスクマネジメントファイル(ISO 14971) | `7_software_risk_management_process/risk_management_file.md` | 0.1 | ドラフト(セルフ承認、Step 11 で作成。HZ-001〜HZ-010 + RCM-001〜RCM-019、Therac-25 実事故事象シーケンス 5 件、構造的 RCM-018/019 で race condition への構造的対応) |
 | CI-DOC-SCMP | ソフトウェア構成管理計画書 | `8_software_configuration_management_process/software_configuration_management_plan.md` | 0.1 | ドラフト(セルフ承認、Step 6 で作成、コンパイラ更新時 HZ-007 リスク評価必須化) |
-| CI-DOC-CIL | 構成アイテム一覧(本書) | `8_software_configuration_management_process/configuration_item_list.md` | 0.2 | ドラフト(セルフ承認、Step 10 反映で v0.1 → v0.2 昇格 — CCB/CRR の v0.1 化を反映) |
+| CI-DOC-CIL | 構成アイテム一覧(本書) | `8_software_configuration_management_process/configuration_item_list.md` | 0.3 | ドラフト(セルフ承認、Step 11 反映で v0.2 → v0.3 昇格 — RMF の v0.1 化を反映) |
 | CI-DOC-CCB | CCB 運用規程 | `8_software_configuration_management_process/ccb_operating_rules.md` | 0.1 | ドラフト(セルフ承認、Step 10 で作成、1 分インターバル §5.4 で正式定義、Therac-25 事故 5 主要因チェック組込) |
 | CI-DOC-CRR | 変更要求台帳 | `8_software_configuration_management_process/change_request_register.md` | 0.1 | ドラフト(セルフ承認、Step 10 で空台帳として初期化、Therac-25 事故主要因類型 A〜F 別集計表新設) |
 | CI-DOC-SPRP | ソフトウェア問題解決手順書 | `9_software_problem_resolution_process/software_problem_resolution_procedure.md` | 0.1 | ドラフト(セルフ承認、Step 7 で作成、Therac-25 事故 5 主要因チェックリスト §4.3.1 を必須化) |
@@ -197,6 +197,7 @@ Phase 2(支援プロセス計画期)完了時点。バージョンは 2026-04-24
 |----------|------|---------|--------|
 | 0.1 | 2026-04-24 | 初版作成(Phase 2 終了時点の CI を網羅登録)。**ドキュメント 22 件**(うち実体化済 9 件: SDP / SMP / SRMP / SSC / SCMP / SPRP / CIL 自身 / DEVSTEPS / UPSTREAM、テンプレートのまま 9 件、追記済 4 件: README / CLAUDE / ACL は未編集)、**SOUP 候補 19 件**(C++ 標準ライブラリ実装 + コンパイラ + Sanitizer ランタイム + テストフレームワーク等を含む。Inc.1 着手時に正式登録)、**ツール 7 件運用中 + 12 件予定**、**構成定義ファイル 8 件運用中 + 7 件予定**、**ベースライン 5 件すべて予定**(planning-baseline は Phase 3 完了時に確定)。Therac-25 学習目的の特徴として、ThreadSanitizer ランタイム(CI-SOUP-015)を「race condition 検出 / HZ-002 直接対応」と明示分類し、`vcpkg.json` ベースライン commit または `conan.lock` による SOUP の SHA-256 固定計画を §5.2 で明記 | k-abe |
 | 0.2 | 2026-04-24 | Step 10(CCB-TH25-001 v0.1 + CRR-TH25-001 v0.1 作成)に伴う整合化。**(1) §4 ドキュメント:** CI-DOC-CCB を「未着手」→ v0.1 に昇格(1 分インターバル §5.4 正式定義、Therac-25 事故 5 主要因チェック組込)、CI-DOC-CRR を「未着手」→ v0.1 に昇格(空台帳、Therac-25 事故主要因類型別集計表 §7.1 新設)。**(2) 自己参照:** CI-DOC-CIL を v0.1 → v0.2 に更新、冒頭バージョン v0.2 + 最終更新日 2026-04-24 を整合更新。**(3) 派生ドキュメント更新漏れ予防:** 姉妹プロジェクト VIP の運用教訓「CIL の派生ドキュメント更新漏れ」(VIP では 11 度発生)を反映し、CCB/CRR 作成と同時に CIL を昇格。Step 10 のコミットに CCB/CRR/CIL/DEVSTEPS/README を一括含める | k-abe |
+| 0.3 | 2026-04-24 | Step 11(RMF-TH25-001 v0.1 作成)に伴う整合化。**(1) §4 ドキュメント:** CI-DOC-RMF を「未着手」→ v0.1 に昇格(HZ-001〜HZ-010 + RCM-001〜RCM-019、Therac-25 実事故事象シーケンス 5 件、構造的 RCM-018/019 で race condition への構造的対応)。**(2) 自己参照:** CI-DOC-CIL を v0.2 → v0.3 に更新、冒頭バージョン v0.3 + 最終更新日 2026-04-24 を整合更新。**(3) 派生ドキュメント更新漏れ予防:** RMF 作成と同時に CIL を昇格。Step 11 のコミットに RMF/CIL/DEVSTEPS/README を一括含める | k-abe |
 
 ## 付録 A: CIL 更新時チェックリスト
 
