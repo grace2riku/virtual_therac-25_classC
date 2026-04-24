@@ -263,7 +263,7 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 作業日 | 2026-04-24 |
 | 作業内容 | IEC 62304 §5.1.10(管理対象となる支援項目)および §8.1(構成識別)に基づき、Phase 2 終了時点で識別可能な全構成アイテムを CIL に登録。**ドキュメント 22 件**(実体化済 9 件: SDP/SMP/SRMP/SSC/SCMP/SPRP/CIL/DEVSTEPS/UPSTREAM、テンプレートのまま 9 件、運用文書 4 件: README/CLAUDE/ACL)、**SOUP 候補 19 件**(C++ コンパイラ・標準ライブラリ実装・Sanitizer ランタイム・テストフレームワーク・モデル検査ツールを含む)、**ツール 7 件運用中 + 12 件予定**、**構成定義ファイル 8 件運用中 + 7 件予定**、**ベースライン 5 件すべて予定**を登録。**ThreadSanitizer ランタイム(CI-SOUP-015)を「race condition 検出 / HZ-002 直接対応」と明示分類** |
 | 成果物 | `8_software_configuration_management_process/configuration_item_list.md`(CIL-TH25-001 v0.1) |
-| コミット | (本 Step コミット時に追記) |
+| コミット | `fb72b5f` — docs(8): 構成アイテム一覧を作成 (CIL-TH25-001 v0.1, Step 9) |
 
 **採用根拠:**
 
