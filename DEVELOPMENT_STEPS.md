@@ -149,7 +149,7 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 作業日 | 2026-04-24 |
 | 作業内容 | SSC-TH25-001 v0.1 で確定済みの HZ-001〜HZ-010 を初期ハザードとして採用し、IEC 62304 §7 + ISO 14971:2019 に基づくリスクマネジメントプロセスを計画。Therac-25 事故主要因(race condition / 整数オーバフロー / インターロック検知失敗 / バイパス可能 UI / レガシーコード前提喪失)に対応する潜在原因カテゴリ・RCM 種別・検証手段を整備。並行処理 RCM については **TSan + モデル検査 + 境界値試験の 3 層検証を必須化**。SOUP 評価情報源を C++ エコシステム(LLVM Security、GCC Security、OSV、Trivy 等)に差し替え。事象シーケンス例として Tyler / Yakima / East Texas の 3 事故を因果連鎖で記述 |
 | 成果物 | `7_software_risk_management_process/software_risk_management_plan.md`(SRMP-TH25-001 v0.1) |
-| コミット | (本 Step コミット時に追記) |
+| コミット | `5116a8e` — docs(7): ソフトウェアリスクマネジメント計画書を作成 (SRMP-TH25-001 v0.1, Step 5) |
 
 **採用根拠:**
 
