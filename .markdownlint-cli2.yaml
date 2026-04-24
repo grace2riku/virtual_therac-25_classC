@@ -23,6 +23,15 @@ config:
   MD036: false
   # Blank lines around fenced code blocks: off — same rationale as MD022
   MD031: false
+  # Blank lines around tables: off — same rationale as MD022/MD031/MD032
+  # (dense IEC 62304 templates place tables immediately after their introducing paragraph)
+  MD058: false
+  # Table column style (pipe spacing / header alignment): off
+  # Rationale: we rely on MD056 (column count consistency) for semantic correctness.
+  # Pure visual pipe-spacing is not worth the maintenance burden on Japanese/English mixed tables.
+  # This aligns with the CI (DavidAnson/markdownlint-cli2-action@v16) effective behavior
+  # and makes the local (npx markdownlint-cli2@0.22+) result deterministic.
+  MD060: false
   # Multiple H1: off — combined plan/report templates use "第 I 部" and "第 II 部" as top-level dividers
   MD025: false
 globs:

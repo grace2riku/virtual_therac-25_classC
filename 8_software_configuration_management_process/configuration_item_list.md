@@ -1,19 +1,19 @@
 # 構成アイテム一覧(CI List)
 
 **ドキュメント ID:** CIL-TH25-001
-**バージョン:** 0.3
-**最終更新日:** 2026-04-24
+**バージョン:** 0.4
+**最終更新日:** 2026-04-25
 **対象製品:** 仮想 Therac-25(Virtual Therac-25) / TH25-SIM-001
 **対象リリース:** 0.1.0(初期開発)以降
 
 | 役割 | 氏名 | 所属 | 日付 | 署名 |
 |------|------|------|------|------|
-| 管理者 | k-abe | — | 2026-04-24 | |
+| 管理者 | k-abe | — | 2026-04-25 | |
 | 承認者 | — | — | — | |
 
 > **本プロジェクトの位置づけ(注記)**
 >
-> 本ドキュメントは IEC 62304 に基づく医療機器ソフトウェア開発プロセスの学習・参考実装を目的とした **仮想プロジェクト** の成果物である。本 CIL は **Phase 2(支援プロセス計画期)完了時点** の構成アイテムを網羅し、以降 Phase 3(インフラ整備期)での CCB-TH25-001 / CRR-TH25-001 / RMF-TH25-001 追加、Inc.1 着手後のソースコード・SOUP・試験資産の追加に応じて更新する。
+> 本ドキュメントは IEC 62304 に基づく医療機器ソフトウェア開発プロセスの学習・参考実装を目的とした **仮想プロジェクト** の成果物である。本 CIL は **Phase 3(インフラ整備期)完了時点(`planning-baseline` 確定: 2026-04-25)** の構成アイテムを網羅する。Phase 2 終了時(v0.1、2026-04-24)で初版、Phase 3 各ステップ(Step 10: CCB/CRR 追加、Step 11: RMF 追加、Step 12: `planning-baseline` 確定)の進捗に応じて昇格してきた。Inc.1 着手後はソースコード・SOUP 正式登録・試験資産の追加に応じて更新する。
 
 ---
 
@@ -49,7 +49,7 @@
 
 ## 4. ドキュメント
 
-Phase 2(支援プロセス計画期)完了時点。バージョンは 2026-04-24 時点。
+Phase 3(インフラ整備期)完了時点(`planning-baseline` 確定)。バージョンは 2026-04-25 時点。
 
 | CI ID | ドキュメント | パス | 現行バージョン | 状態 |
 |-------|-----------|------|-------------|------|
@@ -66,13 +66,13 @@ Phase 2(支援プロセス計画期)完了時点。バージョンは 2026-04-24
 | CI-DOC-SSC | ソフトウェア安全クラス決定記録 | `7_software_risk_management_process/software_safety_class_determination_record.md` | 0.1 | ドラフト(セルフ承認、Step 1 で作成、HZ-001〜HZ-010 確定) |
 | CI-DOC-RMF | リスクマネジメントファイル(ISO 14971) | `7_software_risk_management_process/risk_management_file.md` | 0.1 | ドラフト(セルフ承認、Step 11 で作成。HZ-001〜HZ-010 + RCM-001〜RCM-019、Therac-25 実事故事象シーケンス 5 件、構造的 RCM-018/019 で race condition への構造的対応) |
 | CI-DOC-SCMP | ソフトウェア構成管理計画書 | `8_software_configuration_management_process/software_configuration_management_plan.md` | 0.1 | ドラフト(セルフ承認、Step 6 で作成、コンパイラ更新時 HZ-007 リスク評価必須化) |
-| CI-DOC-CIL | 構成アイテム一覧(本書) | `8_software_configuration_management_process/configuration_item_list.md` | 0.3 | ドラフト(セルフ承認、Step 11 反映で v0.2 → v0.3 昇格 — RMF の v0.1 化を反映) |
+| CI-DOC-CIL | 構成アイテム一覧(本書) | `8_software_configuration_management_process/configuration_item_list.md` | 0.4 | ドラフト(セルフ承認、Step 12 反映で v0.3 → v0.4 昇格 — `planning-baseline` 確定に伴う整合化、Step 10/11 時点の派生ドキュメント追随漏れ(DEVSTEPS 表示バージョン等)をまとめて修正) |
 | CI-DOC-CCB | CCB 運用規程 | `8_software_configuration_management_process/ccb_operating_rules.md` | 0.1 | ドラフト(セルフ承認、Step 10 で作成、1 分インターバル §5.4 で正式定義、Therac-25 事故 5 主要因チェック組込) |
 | CI-DOC-CRR | 変更要求台帳 | `8_software_configuration_management_process/change_request_register.md` | 0.1 | ドラフト(セルフ承認、Step 10 で空台帳として初期化、Therac-25 事故主要因類型 A〜F 別集計表新設) |
 | CI-DOC-SPRP | ソフトウェア問題解決手順書 | `9_software_problem_resolution_process/software_problem_resolution_procedure.md` | 0.1 | ドラフト(セルフ承認、Step 7 で作成、Therac-25 事故 5 主要因チェックリスト §4.3.1 を必須化) |
 | CI-DOC-ACL | IEC 62304 監査チェックリスト | `compliance/audit_checklist.md` | テンプレートのまま | 未編集(Inc.1 以降で本プロジェクト向けに整備予定) |
 | CI-DOC-README | プロジェクト README | `README.md` | — | 継続更新(製品概要・進捗表・関連規格・参考文献 Leveson & Turner 1993 を含む) |
-| CI-DOC-DEVSTEPS | 開発ステップ記録(お手本) | `DEVELOPMENT_STEPS.md` | 0.6 | 継続更新(Step 0〜8 を時系列記録) |
+| CI-DOC-DEVSTEPS | 開発ステップ記録(お手本) | `DEVELOPMENT_STEPS.md` | 0.10 | 継続更新(Step 0〜12 を時系列記録。v0.7 Step 9、v0.8 Step 10、v0.9 Step 11、v0.10 Step 12 に対応) |
 | CI-DOC-CLAUDE | 編集ガイド(AI 支援含む) | `CLAUDE.md` | — | 本プロジェクト固有ルール追記済(Therac-25 事故主要因の第一原理、C++20 固定、PRB- プレフィックス、独立性擬制、DEVELOPMENT_STEPS 更新義務) |
 | CI-DOC-UPSTREAM | iec62304_template への修正要望台帳 | `UPSTREAM_FEEDBACK.md` | 0.1 | ドラフト(セルフ承認、Step 4 で作成、初期は空台帳) |
 
@@ -140,7 +140,7 @@ Phase 2(支援プロセス計画期)完了時点。バージョンは 2026-04-24
 
 | CI ID | 名称 | パス | 用途 |
 |-------|------|------|------|
-| CI-CFG-001 | markdownlint 設定 | `.markdownlint-cli2.yaml` | Markdown lint ルール定義(MD013/MD033/MD024 等の緩和、日本語・密集テーブル向け) |
+| CI-CFG-001 | markdownlint 設定 | `.markdownlint-cli2.yaml` | Markdown lint ルール定義(MD013/MD033/MD024/MD058/MD060 等の緩和、日本語・密集テーブル向け。Step 12 で MD058/MD060 を明示無効化し、CI action と npx 最新版の差異を解消) |
 | CI-CFG-002 | lychee 設定 | `lychee.toml` | リンクチェック設定(オフラインモード、`{{...}}` プレースホルダ除外) |
 | CI-CFG-003 | GitHub Actions ワークフロー(ドキュメント) | `.github/workflows/docs-check.yml` | ドキュメント系 CI 定義(構造検証 + markdownlint + lychee + 日付書式) |
 | CI-CFG-004 | Issue テンプレート(PRB) | `.github/ISSUE_TEMPLATE/problem_report.md` | 問題報告起票用(Therac-25 事故要因対応欄、ASan/UBSan/TSan 検出元含む) |
@@ -185,11 +185,62 @@ Phase 2(支援プロセス計画期)完了時点。バージョンは 2026-04-24
 
 | ベースライン ID | Git タグ | 日付 | 目的 | 承認者 | 含まれる主要 CI | 関連 CR |
 |---------------|---------|------|------|-------|--------------|---------|
-| (予定) BL-YYYYMMDD-001 | `planning-baseline` | 予定: Phase 3 完了時 | 計画凍結(M0 基盤整備期完了)。RMF 初版・CCB 規程・CRR 整備完了で確定 | — | CI-DOC-{SDP, SMP, SRMP, SSC, RMF v0.1, SCMP, SPRP, CIL v0.x, CCB, CRR}、CI-CFG-{001〜008}、CI-DOC-{README, DEVSTEPS, CLAUDE, UPSTREAM} | — |
+| BL-20260425-001 | `planning-baseline` | 2026-04-25 | 計画凍結(M0 基盤整備期完了)。RMF 初版・CCB 規程・CRR 整備完了で確定(詳細は §10.1 参照) | k-abe | CI-DOC-{SDP v0.1, SMP v0.1, SRMP v0.1, SSC v0.1, RMF v0.1, SCMP v0.1, SPRP v0.1, CIL v0.4, CCB v0.1, CRR v0.2}、CI-CFG-{001〜008}、CI-DOC-{README, DEVSTEPS v0.10, CLAUDE, UPSTREAM v0.1, ACL} | — |
 | (予定) BL-YYYYMMDD-NNN | `inc1-requirements-frozen` | — | Inc.1 要求凍結(SRS v0.1) | — | 上記 + CI-DOC-SRS、SOUP 正式登録 | — |
 | (予定) BL-YYYYMMDD-NNN | `inc1-design-frozen` | — | Inc.1 設計凍結(SAD v0.1 + SDD v0.1) | — | 上記 + CI-DOC-{SAD, SDD} | — |
 | (予定) BL-YYYYMMDD-NNN | `inc1-baseline` | — | Inc.1 完了(試験合格) | — | 上記 + CI-SRC-{001, 005}、CI-TD-* | — |
 | (予定) BL-YYYYMMDD-NNN | `v1.0.0` | — | 初回リリース | — | 全 CI | — |
+
+### 10.1 BL-20260425-001(`planning-baseline`)詳細スナップショット
+
+SCMP-TH25-001 §5.2 の「ベースライン状態記録」に従い、`planning-baseline` 確定時点の状態を以下に記録する。
+
+| 項目 | 内容 |
+|------|------|
+| ベースライン ID | `BL-20260425-001` |
+| Git タグ | `planning-baseline` |
+| ベースライン日 | 2026-04-25 |
+| Git コミット | _(Step 12 の最終コミット時に追記)_ |
+| 目的 | M0(計画期+支援プロセス計画+インフラ整備)完了凍結。Phase 4(Inc.1 着手)への前提として、開発計画・リスクマネジメント・構成管理・問題解決・保守の各プロセス計画を確定し、RMF 初版 + CCB 規程 + 空 CRR の整備を完了した状態 |
+| 承認者・承認日 | k-abe、2026-04-25 |
+| 関連 CR | 無し(Phase 0〜3 の活動はすべて `DEVELOPMENT_STEPS.md` に記録された立ち上げ活動であり、CCB-TH25-001 施行前および直後の継続活動に該当) |
+
+**含まれる主要 CI(バージョン固定):**
+
+| CI ID | 名称 | バージョン | 備考 |
+|-------|-----|----------|------|
+| CI-DOC-SSC | ソフトウェア安全クラス決定記録 | 0.1 | Step 1 / HZ-001〜HZ-010 確定、クラス C 決定 |
+| CI-DOC-SDP | ソフトウェア開発計画書 | 0.1 | Step 2 / 骨子確定、C++20 固定、V 字+インクリメンタル |
+| CI-DOC-SRMP | ソフトウェアリスクマネジメント計画書 | 0.1 | Step 5 / 3 層検証(TSan+モデル検査+境界値)+ 2 段冗長 RCM 必須化 |
+| CI-DOC-SCMP | ソフトウェア構成管理計画書 | 0.1 | Step 6 / CR 区分 3 段階、並行処理時 TSan 必須、コンパイラ更新時 HZ-007 評価 |
+| CI-DOC-SPRP | ソフトウェア問題解決手順書 | 0.1 | Step 7 / Therac-25 事故 5 主要因チェックリスト §4.3.1 必須化 |
+| CI-DOC-SMP | ソフトウェア保守計画書 | 0.1 | Step 8 / 主要因チェックリスト定期適用 §4.8、全コードベース水平展開 §5.4 |
+| CI-DOC-CIL | 構成アイテム一覧(本書) | 0.4 | Step 9 初版、Step 10/11/12 で昇格 |
+| CI-DOC-CCB | CCB 運用規程 | 0.1 | Step 10 / 1 分インターバル §5.4 正式定義 |
+| CI-DOC-CRR | 変更要求台帳 | 0.2 | Step 10 空台帳、Step 12 で参照文書整合化 |
+| CI-DOC-RMF | リスクマネジメントファイル(ISO 14971) | 0.1 | Step 11 / HZ-001〜010 + RCM-001〜019 登録、Therac-25 実事故事象シーケンス 5 件 |
+| CI-DOC-{SRS, SAD, SDD, UTPR, ITPR, STPR, SMS} | 各ライフサイクル成果物 | 未着手(テンプレートのまま) | Inc.1 着手後に順次作成 |
+| CI-DOC-ACL | IEC 62304 監査チェックリスト | テンプレートのまま | Inc.1 以降で本プロジェクト向け整備 |
+| CI-DOC-README | プロジェクト README | 継続更新 | Phase 3 完了時点の進捗表を反映 |
+| CI-DOC-DEVSTEPS | 開発ステップ記録 | 0.10 | Step 0〜12 時系列記録 |
+| CI-DOC-CLAUDE | 編集ガイド | — | Therac-25 固有ルール反映済 |
+| CI-DOC-UPSTREAM | upstream フィードバック台帳 | 0.1 | 空台帳 |
+| CI-CFG-{001〜008} | 運用構成定義 | — | markdownlint / lychee / GH Actions / Issue/PR テンプレート / `.gitignore` |
+
+**検証成果物(機械的独立性の代替):**
+
+- GitHub Actions `Documentation Checks` ワークフロー: Step 5〜11 のすべての push で `success`(構造検証 + markdownlint + lychee + 日付書式ポリシー)
+  - Step 11 最終確定コミット `88a3b170`: 2026-04-24T14:18:35Z `success`
+  - Step 11 RMF 作成コミット `117863a1`: 2026-04-24T14:18:03Z `success`
+  - それ以前の Step 5〜10 も同様に全件 `success`
+- ローカル lint 結果(本 Step 12 時点、`npx markdownlint-cli2 "**/*.md"`): 0 error(Step 12 で `.markdownlint-cli2.yaml` に MD058/MD060 の明示無効化を追加し、CI 側 `DavidAnson/markdownlint-cli2-action@v16` との環境差異を解消)
+- lychee ローカル実行: CI の `lycheeverse/lychee-action@v2` による内部リンクチェックが全件 `success` のため代替とする
+
+**残存する既知の限界:**
+
+- Inc.1 以降の成果物(SRS / SAD / SDD / UT / IT / ST / SMS)は本ベースライン時点で未着手。これは V 字モデル+インクリメンタル方式の計画通り(SDP §3.1)
+- SOUP の正式バージョン固定(vcpkg または Conan ロックファイル + SHA-256)は Inc.1 着手時点で実施(SCMP §3.2、`inc1-baseline` 時点で確定)
+- SPRP §4.3.1 Therac-25 事故 5 主要因チェックリストの **運用実績はゼロ**(CCB 施行直後のため)。Phase 4(Inc.1 着手)以降で運用実績を蓄積する
 
 ## 11. 改訂履歴
 
@@ -198,6 +249,7 @@ Phase 2(支援プロセス計画期)完了時点。バージョンは 2026-04-24
 | 0.1 | 2026-04-24 | 初版作成(Phase 2 終了時点の CI を網羅登録)。**ドキュメント 22 件**(うち実体化済 9 件: SDP / SMP / SRMP / SSC / SCMP / SPRP / CIL 自身 / DEVSTEPS / UPSTREAM、テンプレートのまま 9 件、追記済 4 件: README / CLAUDE / ACL は未編集)、**SOUP 候補 19 件**(C++ 標準ライブラリ実装 + コンパイラ + Sanitizer ランタイム + テストフレームワーク等を含む。Inc.1 着手時に正式登録)、**ツール 7 件運用中 + 12 件予定**、**構成定義ファイル 8 件運用中 + 7 件予定**、**ベースライン 5 件すべて予定**(planning-baseline は Phase 3 完了時に確定)。Therac-25 学習目的の特徴として、ThreadSanitizer ランタイム(CI-SOUP-015)を「race condition 検出 / HZ-002 直接対応」と明示分類し、`vcpkg.json` ベースライン commit または `conan.lock` による SOUP の SHA-256 固定計画を §5.2 で明記 | k-abe |
 | 0.2 | 2026-04-24 | Step 10(CCB-TH25-001 v0.1 + CRR-TH25-001 v0.1 作成)に伴う整合化。**(1) §4 ドキュメント:** CI-DOC-CCB を「未着手」→ v0.1 に昇格(1 分インターバル §5.4 正式定義、Therac-25 事故 5 主要因チェック組込)、CI-DOC-CRR を「未着手」→ v0.1 に昇格(空台帳、Therac-25 事故主要因類型別集計表 §7.1 新設)。**(2) 自己参照:** CI-DOC-CIL を v0.1 → v0.2 に更新、冒頭バージョン v0.2 + 最終更新日 2026-04-24 を整合更新。**(3) 派生ドキュメント更新漏れ予防:** 姉妹プロジェクト VIP の運用教訓「CIL の派生ドキュメント更新漏れ」(VIP では 11 度発生)を反映し、CCB/CRR 作成と同時に CIL を昇格。Step 10 のコミットに CCB/CRR/CIL/DEVSTEPS/README を一括含める | k-abe |
 | 0.3 | 2026-04-24 | Step 11(RMF-TH25-001 v0.1 作成)に伴う整合化。**(1) §4 ドキュメント:** CI-DOC-RMF を「未着手」→ v0.1 に昇格(HZ-001〜HZ-010 + RCM-001〜RCM-019、Therac-25 実事故事象シーケンス 5 件、構造的 RCM-018/019 で race condition への構造的対応)。**(2) 自己参照:** CI-DOC-CIL を v0.2 → v0.3 に更新、冒頭バージョン v0.3 + 最終更新日 2026-04-24 を整合更新。**(3) 派生ドキュメント更新漏れ予防:** RMF 作成と同時に CIL を昇格。Step 11 のコミットに RMF/CIL/DEVSTEPS/README を一括含める | k-abe |
+| 0.4 | 2026-04-25 | Step 12(`planning-baseline` 確定)に伴う整合化。**(1) §10 ベースライン履歴:** 予定行 `(予定) BL-YYYYMMDD-001` を実確定行 `BL-20260425-001` に昇格し、Git タグ `planning-baseline` / 日付 2026-04-25 / 承認者 k-abe / 含まれる主要 CI をすべてバージョン付きで確定記載。**(2) §10.1 詳細スナップショット節新設**(SCMP §5.2 の状態記録項目に準拠): ベースライン ID / Git タグ / ベースライン日 / 目的 / 承認者 / 関連 CR / 含まれる全 CI とバージョン一覧 / 検証成果物(CI 全 success 履歴 + ローカル lint 0 error)/ 残存する既知の限界(SOUP 未固定等)を網羅。**(3) 派生ドキュメント追随漏れ一括修正:** CI-DOC-DEVSTEPS のバージョンを v0.6(古) → v0.10(最新) に修正(Step 9/10/11 時点の追随漏れ、VIP 類型に合致)。**(4) CI-CFG-001 の説明更新:** `.markdownlint-cli2.yaml` で MD058/MD060 を明示無効化した旨を反映。**(5) 自己参照:** CI-DOC-CIL を v0.3 → v0.4、冒頭バージョン・最終更新日を 2026-04-25 に整合更新。**(6) 冒頭位置づけ注記更新:** 「Phase 2 終了時点」→「Phase 3 完了時点(`planning-baseline` 確定: 2026-04-25)」に表現更新 | k-abe |
 
 ## 付録 A: CIL 更新時チェックリスト
 

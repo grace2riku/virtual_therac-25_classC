@@ -352,12 +352,45 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 
 ---
 
+### Step 12 — Phase 3 完了確認 + `planning-baseline` タグ付与(M0 基盤整備期完了)
+
+| 項目 | 内容 |
+|------|------|
+| 作業日 | 2026-04-25 |
+| 作業内容 | Phase 3(インフラ整備期)完了確認を実施し、SCMP-TH25-001 §5.1 に従い `planning-baseline` タグを付与。**(1) CI 検証:** GitHub Actions `Documentation Checks` ワークフローが Step 5〜11 の push 全件で `success`(最終は `88a3b170` 2026-04-24T14:18:35Z)であることを `gh api` で直接確認。単独開発下の機械的独立性(SCMP §4.1.1)の代替として活用。**(2) ローカル lint 環境差異の是正:** `npx markdownlint-cli2@0.22+` と CI action `DavidAnson/markdownlint-cli2-action@v16` の間で MD058(blanks-around-tables)/ MD060(table-column-style)のデフォルト検出差が常態化していたため、`.markdownlint-cli2.yaml` に両ルールの明示無効化を追加(MD022/MD031/MD032 と同じ rationale)。**(3) 派生ドキュメント追随漏れの一括修正:** Step 10/11 時点で発生していた CIL §4 DEVSTEPS バージョン表示 0.6 のまま、CRR §2 参照文書の RMF「作成予定」表示、README の CIL 状態 v0.1 のまま、をまとめて修正。**(4) CIL v0.3 → v0.4 昇格:** §10 ベースライン履歴の予定行を実確定行 `BL-20260425-001` に昇格、§10.1 に SCMP §5.2 準拠の詳細スナップショット節(ベースライン ID / Git タグ / 日付 / 含まれる全 CI とバージョン / 検証成果物 / 残存する既知の限界)を新設。**(5) CRR v0.1 → v0.2 昇格:** §2 参照文書を RMF v0.1 / CIL v0.4 に整合更新、§7 集計表に Phase 3 完了時行(全項目 0)追加、§4/§6 注記を「立ち上げ活動の範囲 Step 0〜12、本格運用 Inc.1 から」に更新。**(6) `planning-baseline` タグ付与:** 本 Step の最終コミットに付与、Git の保護タグ設定を適用(SCMP §5.3) |
+| 成果物 | `.markdownlint-cli2.yaml`(MD058/MD060 無効化追記)、CIL-TH25-001 v0.4(§10/10.1 新設 + 追随漏れ修正)、CRR-TH25-001 v0.2(§2 参照文書整合化 + §7 Phase 3 行追加 + §4/§6 注記更新)、README.md(CIL v0.4 / CRR v0.2 状態欄更新)、DEVELOPMENT_STEPS.md v0.9 → v0.10(本 Step 追記、改訂履歴 v0.10)、Git タグ `planning-baseline`(ベースライン ID `BL-20260425-001`) |
+| コミット | _(本 Step コミット時に追記)_ |
+
+**採用根拠:**
+
+- **IEC 62304 §8.3(構成状態記録)と SCMP-TH25-001 §5.1 への対応:** SCMP §5.1 は「基盤ドキュメント承認時(M0 終了)」で `planning-baseline` タグを付与することを規定。Phase 3 完了時に確定することで、Inc.1 着手時に参照される計画・RCM・プロセス文書群が不可逆に凍結される節目となる
+- **順序として Step 11(RMF 作成)→ Step 12(planning-baseline 確定)とした理由:**
+  - `planning-baseline` に含まれる CI として RMF v0.1 が必須(M0 基盤整備期の最後の計画成果物であり、SRMP のプロセス出力)
+  - RMF v0.1 完成後にベースラインを確定することで、Inc.1 着手時に参照される RCM-001〜RCM-019 が凍結状態として確立される
+  - CCB(Step 10)→ RMF(Step 11)→ planning-baseline(Step 12)の連続は、「規程施行 → ベースライン対象物の最後のピース作成 → ベースライン確定」の論理順序で最も自然
+- **SCMP §5.2 ベースライン状態記録項目への対応(CIL §10.1 新設):** ベースライン ID / Git タグ / ベースライン日 / Git コミット / 含まれる CI とバージョン / 関連 CR / 検証成果物 / 承認者・承認日の全項目を CIL §10.1 で記録。規格要求の「構成状態記録」を CIL 内に物理的に物質化することで、監査時の参照粒度を確保
+- **ローカル lint 環境差異の是正(`.markdownlint-cli2.yaml` 修正)の rationale:**
+  - MD058(blanks-around-tables)は MD022/MD031/MD032 と同じ「blank lines around X」系列。本プロジェクトのテンプレートはテーブルを導入パラグラフ直後に配置する密集設計で、他の 3 ルールと同じ根拠で無効化
+  - MD060(table-column-style)はパイプスペーシング/ヘッダ整列の純粋な視覚整形ルール。本プロジェクトでは列数整合性の MD056 が有効で意味的正しさは確保される。日本語・英語混在テーブルでのピクセルパーフェクト整列は保守負担に見合わない
+  - CI action v16 の実効挙動が MD058/MD060 をデフォルト検出しないため、ローカル `npx markdownlint-cli2@0.22+` との差異が常態化していた。明示無効化により将来 CI action のバージョン更新時にも動作が一貫する(将来防衛)
+- **CR 起票を行わない理由(本格運用は Inc.1 から):**
+  - Phase 3 は CCB 規程自身の施行(Step 10)とベースライン確定(Step 12)という連続した立ち上げ活動であり、CR フローを通すと「CR 起票用の CR」の循環が生じる
+  - 姉妹プロジェクト VIP の CRR-VIP-001 運用(最初の CR は Inc.1 着手時の機能追加 CR)と整合
+  - CRR §4/§6 の注記を「立ち上げ活動の範囲 Step 0〜12、本格運用 Inc.1 から」に明示更新することで監査可能性を担保
+- **Therac-25 学習目的の特徴:**
+  - **派生ドキュメント追随漏れの教訓:** Step 10/11 時点で発生した CIL/CRR/README の追随漏れは、姉妹プロジェクト VIP で 11 度発生した同類型の問題と一致。CIL 付録 A のチェックリスト厳格適用で予防すべきだった。Step 12 でまとめて是正することで、Phase 4 着手前に整合状態を確立。Phase 4 以降はチェックリスト適用を徹底する教訓とする
+  - **ベースラインの意義:** Therac-25 は「旧機種(Therac-6/20)コード再利用時の前提条件見直し漏れ(HZ-007)」を事故要因の一つとした。`planning-baseline` によって全計画・リスクコントロール手段の前提条件が Git タグで永続記録されることは、HZ-007 類型(前提喪失)への構造的予防となる
+  - **M0 凍結の重み:** M0 完了時点の成果物凍結は、Therac-25 において「HW インターロック廃止の設計判断」のような重大な前提が後から無意識に変更されることを防ぐ仕組み。タグ保護(SCMP §5.3、削除/上書き禁止)を GitHub の保護タグ機能で強制することで、プロジェクト進行中に「なぜこう決めたか」の根拠が不可逆に保持される
+  - **機械的独立性の実証:** 単独開発下で独立レビュアが不在のため、GitHub Actions の `Documentation Checks` が Step 5〜11 全 push で `success` であることを、Step 12 で「ベースライン確定時の検証成果物」として CIL §10.1 に明示記録。これは Therac-25 事故主要因「独立レビュー不在」への補填手段を、タグ付与時に形式的に確認する仕組み
+
+---
+
 ## 次のステップ(予定)
 
 | Step | 内容 | 予定 |
 |------|------|------|
-| Step 12 | Phase 3 完了確認、`planning-baseline` タグ付与(M0 基盤整備期完了)、CIL を v0.3(RMF v0.1 反映)に昇格 | 次回作業時 |
-| Step 13+ | Inc.1 着手(SRS → SAD → SDD → コード → UT/IT) | Phase 4 開始 |
+| Step 13 | **Phase 4 開始: Inc.1 着手**。SRS(SRS-TH25-001)起票、HZ-001/HZ-005 直接対応要求の明記、RCM-001〜RCM-019 のうち Inc.1 対象(主にビーム生成・モード制御コア)を要求化、C++20 初期プロジェクト骨格(CMake + vcpkg/Conan + GoogleTest + ASan/UBSan/TSan)の選定 | 次回作業時 |
+| Step 14+ | SAD → SDD → コード → UT/IT(Inc.1 V 字一周)→ `inc1-requirements-frozen` / `inc1-design-frozen` / `inc1-baseline` タグ付与 | Inc.1 期間中 |
 
 ## 改訂履歴
 
@@ -372,3 +405,4 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 0.7 | 2026-04-24 | Step 9(CIL-TH25-001 v0.1 作成)を追記 | k-abe |
 | 0.8 | 2026-04-24 | Step 10(CCB-TH25-001 v0.1 + CRR-TH25-001 v0.1 作成)を追記 | k-abe |
 | 0.9 | 2026-04-24 | Step 11(RMF-TH25-001 v0.1 作成)を追記 | k-abe |
+| 0.10 | 2026-04-25 | Step 12(Phase 3 完了確認 + `planning-baseline` タグ付与、ベースライン ID `BL-20260425-001`)を追記。CIL v0.4 / CRR v0.2 / `.markdownlint-cli2.yaml` MD058/MD060 明示無効化 / README 整合化を同時実施。「次のステップ(予定)」から Step 12 を削除し、Step 13(Inc.1 着手)以降を更新 | k-abe |
