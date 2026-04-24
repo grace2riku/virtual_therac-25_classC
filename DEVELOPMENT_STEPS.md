@@ -256,14 +256,43 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 
 ---
 
+### Step 9 — CIL(構成アイテム一覧)初版作成
+
+| 項目 | 内容 |
+|------|------|
+| 作業日 | 2026-04-24 |
+| 作業内容 | IEC 62304 §5.1.10(管理対象となる支援項目)および §8.1(構成識別)に基づき、Phase 2 終了時点で識別可能な全構成アイテムを CIL に登録。**ドキュメント 22 件**(実体化済 9 件: SDP/SMP/SRMP/SSC/SCMP/SPRP/CIL/DEVSTEPS/UPSTREAM、テンプレートのまま 9 件、運用文書 4 件: README/CLAUDE/ACL)、**SOUP 候補 19 件**(C++ コンパイラ・標準ライブラリ実装・Sanitizer ランタイム・テストフレームワーク・モデル検査ツールを含む)、**ツール 7 件運用中 + 12 件予定**、**構成定義ファイル 8 件運用中 + 7 件予定**、**ベースライン 5 件すべて予定**を登録。**ThreadSanitizer ランタイム(CI-SOUP-015)を「race condition 検出 / HZ-002 直接対応」と明示分類** |
+| 成果物 | `8_software_configuration_management_process/configuration_item_list.md`(CIL-TH25-001 v0.1) |
+| コミット | (本 Step コミット時に追記) |
+
+**採用根拠:**
+
+- **SCMP §3.1 一元管理要件への対応**: SCMP-TH25-001 §3.1 が「構成アイテム一覧は本書と同ディレクトリの `configuration_item_list.md` で一元管理」と規定するため、SCMP 確定後の早期に CIL を整備する必要がある。
+- 順序として **SCMP(Step 6)→ SPRP(Step 7)→ SMP(Step 8)→ CIL(Step 9)** とした理由:
+  - CIL §4 ドキュメント表は SCMP/SPRP/SMP の各文書のバージョン情報を保持するため、これら 3 文書の確定後に作成するのが整合的
+  - CIL §5 SOUP 表は SCMP §3.2(SOUP 識別)の規定(コンパイラ・標準ライブラリ実装・Sanitizer ランタイムも SOUP 扱い)を反映する必要がある
+- **Phase 2 終了時点での適切な詳細度**:
+  - 実体化済成果物(SDP〜SMP の 9 文書)は v0.1 として登録
+  - テンプレートのまま未着手の文書(SRS/SAD/SDD/UTPR/ITPR/STPR/SMS/RMF/CCB/CRR)は「未着手」として登録(将来の追加忘れ防止)
+  - SOUP・ツール・CFG・試験資産は「予定」プレフィクスで登録(Inc.1 着手時に正式昇格)
+  - ベースラインは 5 件すべて予定(`planning-baseline` は Phase 3 完了時に確定)
+- **Therac-25 学習目的の追加要件(本書の独自要素):**
+  - **C++ エコシステムの SOUP 多層性に対応**(§5): クラス分類を C++ コンパイラ(2 種、clang++/g++)、C++ 標準ライブラリ実装(2 種、libc++/libstdc++)、ビルドシステム(CMake/Ninja)、パッケージ管理(vcpkg/Conan)、テストフレームワーク(GoogleTest/GoogleMock)、静的解析(clang-tidy/cppcheck/IWYU)、**Sanitizer ランタイム 3 種(ASan/UBSan/TSan)を独立 SOUP として登録**、ファジング(libFuzzer)、網羅率(llvm-cov)、整形(clang-format)、モデル検査(TLA+/SPIN/Frama-C 検討中)の 19 件構成。SCMP §3.2 の規定を全反映
+  - **ThreadSanitizer ランタイム(CI-SOUP-015)を Therac-25 race condition 直接対応として明示分類**(§5.1)— 「**HZ-002 直接対応**」を関連ハザード列に明記。コンパイラ同梱で別 ID 管理する理由は、TSan ランタイムのバグや更新が Therac-25 race condition 試験の信頼性に直結するため、独立追跡可能にする
+  - **PR/Issue テンプレートの Therac-25 事故要因対応欄を CFG として明示**(§7 CI-CFG-004): PRB/CR テンプレートが Therac-25 事故要因対応を必須記入させる仕掛けを CIL レベルで管理
+  - **CCB 議事録の整合確認** を §付録 A チェックリストに追加 — 姉妹プロジェクト VIP の運用教訓「CIL の派生ドキュメント更新漏れ」を未然防止
+- **付録 A CIL 更新時チェックリスト**: 姉妹プロジェクト VIP で 11 度発生した「派生ドキュメント更新漏れ」教訓を反映し、自己参照(CI-DOC-CIL)昇格・全 7 セクション全走査・冒頭メタ整合更新を必須項目化
+
+---
+
 ## 次のステップ(予定)
 
 | Step | 内容 | 予定 |
 |------|------|------|
-| Step 9 | CIL(構成アイテム一覧)初版。Step 6 SCMP §3 に基づく一元管理開始 | 次回作業時 |
-| Step 10 | CCB 運用規程(CCB-TH25-001)・CR 台帳(CRR-TH25-001) 初版。1 分インターバルを CCB-TH25-001 §5.4 で正式に定義 | Step 9 と並行で着手可 |
-| Step 11 | RMF(リスクマネジメントファイル)初版 — Therac-25 事故要因のハザード分析、HZ-001〜HZ-010 を SRMP プロセスに従って実体化 | Step 9/10 と並行で着手可 |
-| Step 12+ | Inc.1 着手(SRS → SAD → SDD → コード → UT/IT) | Phase 4 開始 |
+| Step 10 | CCB 運用規程(CCB-TH25-001)・CR 台帳(CRR-TH25-001) 初版。1 分インターバルを CCB-TH25-001 §5.4 で正式に定義 | 次回作業時 |
+| Step 11 | RMF(リスクマネジメントファイル)初版 — Therac-25 事故要因のハザード分析、HZ-001〜HZ-010 を SRMP プロセスに従って実体化 | Step 10 と並行で着手可 |
+| Step 12 | Phase 3 完了確認、`planning-baseline` タグ付与(M0 基盤整備期完了) | Step 10/11 完了後 |
+| Step 13+ | Inc.1 着手(SRS → SAD → SDD → コード → UT/IT) | Phase 4 開始 |
 
 ## 改訂履歴
 
@@ -275,3 +304,4 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 0.4 | 2026-04-24 | Step 6(SCMP-TH25-001 v0.1 作成)を追記 | k-abe |
 | 0.5 | 2026-04-24 | Step 7(SPRP-TH25-001 v0.1 作成)を追記 | k-abe |
 | 0.6 | 2026-04-24 | Step 8(SMP-TH25-001 v0.1 作成)を追記 | k-abe |
+| 0.7 | 2026-04-24 | Step 9(CIL-TH25-001 v0.1 作成)を追記 | k-abe |
