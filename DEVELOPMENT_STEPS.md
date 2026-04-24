@@ -174,7 +174,7 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 作業日 | 2026-04-24 |
 | 作業内容 | IEC 62304 §8 に基づくソフトウェア構成管理プロセスを計画。GitHub Flow、CR 区分 3 段階(軽微/中程度/重大)、単独開発向け CCB プロセス、ベースラインタグ規則、SOUP 識別項目を C++ エコシステム(vcpkg/Conan、libc++/libstdc++、clang/gcc 等)に対応させて整備。Therac-25 固有の追加要求として、(a) 並行処理関連変更時の TSan 必須化、(b) コンパイラ・標準ライブラリ更新時の HZ-007(レガシーコード前提喪失)リスク評価を「重大変更の追加検証」として規定。事後記録(CRR クローズ・CIL バージョン昇格等)の admin bypass 例外条件(§4.1.2)を 4 条件で整備 |
 | 成果物 | `8_software_configuration_management_process/software_configuration_management_plan.md`(SCMP-TH25-001 v0.1) |
-| コミット | (本 Step コミット時に追記) |
+| コミット | `f0122fe` — docs(8): ソフトウェア構成管理計画書を作成 (SCMP-TH25-001 v0.1, Step 6) |
 
 **採用根拠:**
 
