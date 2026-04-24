@@ -202,7 +202,7 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 作業日 | 2026-04-24 |
 | 作業内容 | IEC 62304 §9 に基づく問題報告・調査・通知・解決・検証・傾向分析プロセスを規定。GitHub Issue ベースの PRB-NNNN 運用、重大度 4 段階(Critical の例を Therac-25 文脈で具体化)、根本原因 13 分類(並行処理・整数オーバフロー・共有状態・インターロック欠落・バイパス UI・レガシーコード前提喪失を独立カテゴリ化)。**§4.3.1 Therac-25 事故 5 主要因チェックリスト(A: race condition / B: 整数オーバフロー / C: 共有状態 / D: インターロック欠落 / E: バイパス UI / F: レガシー前提喪失)を Critical 案件および並行処理関連 Major 以上で必須化**。傾向分析(§8.2)に Therac-25 事故主要因類型別件数と Sanitizer 別検出件数を追加。検証(§9)に並行処理関連の TSan + モデル検査の必須化と Sanitizer 関連修正の再現試験要求を追加 |
 | 成果物 | `9_software_problem_resolution_process/software_problem_resolution_procedure.md`(SPRP-TH25-001 v0.1) |
-| コミット | (本 Step コミット時に追記) |
+| コミット | `a99df2c` — docs(9): ソフトウェア問題解決手順書を作成 (SPRP-TH25-001 v0.1, Step 7) |
 
 **採用根拠:**
 
