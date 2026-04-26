@@ -486,11 +486,47 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 
 ---
 
+### Step 16 — Inc.1 SDD-TH25-001 v0.1 作成 + `inc1-design-frozen` タグ付与(CR-0004)
+
+| 項目 | 内容 |
+|------|------|
+| 作業日 | 2026-04-26 |
+| 作業内容 | Phase 4(Inc.1)の Step 16 として、ソフトウェア詳細設計書(SDD-TH25-001 v0.1)を作成し、SCMP §5.1 に従い `inc1-design-frozen` タグを付与して Inc.1 設計を不可逆に凍結。CCB-TH25-001 v0.1 本格運用第 4 例として CR-0004(GitHub Issue #4)を MAJOR 区分で起票・処理。**(1) CR-0004 起票:** GitHub Issue #4、`change-request` ラベル付き、MAJOR 区分(安全関連 / 詳細設計初版 / RCM 影響 / 並行処理関連 / ベースライン凍結を伴うの 5 項目該当)。起票時刻 2026-04-26T11:33:00Z。**(2) 1 分インターバル遵守:** Issue 起票 → SDD 作成所要時間で十分経過(CCB §5.4)。**(3) SDD-TH25-001 v0.1 作成:** SAD §4.3 の ARCH-NNN.x をユニットレベルまで分解し、全 22 ユニットを確定。**§3 ユニットへの分解(IEC 62304 §5.4.1):** UNIT-101〜104(Inc.4 空殻)/ UNIT-200(共通型 — 強い型 8 種 + `enum class` 4 種 + `Result<T,E>`)/ UNIT-201〜210(Safety Core: SafetyCoreOrchestrator / TreatmentModeManager / BeamController / DoseManager / TurntableManager / BendingMagnetManager / SafetyMonitor (空殻) / StartupSelfCheck / AuditLogger (空殻) / CoreAuthenticationGateway (空殻))/ UNIT-301〜304(Hardware Simulator: ElectronGunSim / BendingMagnetSim / TurntableSim 故障注入機能 / IonChamberSim サチュレーション・片系失陥模擬)/ UNIT-401(InProcessQueue SPSC `folly::ProducerConsumerQueue`)/ UNIT-402(InterProcessChannel gRPC over UDS)。**§4 各ユニットの詳細設計(IEC 62304 §5.4.2 クラス C 必須):** 全 UNIT について公開 API・データ構造・アルゴリズム/状態遷移・資源使用量/タイミング制約・例外/異常系を記述。中核は UNIT-200 CommonTypes(`enum class ErrorCode` 8 系統 × 4〜6 件 = 計 30 件以上の階層化、`PulseCounter` で `std::atomic<uint64_t>` 内包)、UNIT-201 SafetyCoreOrchestrator(8 状態の `LifecycleState` 状態機械)、UNIT-204 DoseManager(`PulseCounter` で HZ-003 整数オーバフロー構造的排除、5,800 万年連続照射相当の余裕)、UNIT-203 BeamController(< 10 ms ビームオフ保証 + `compare_exchange` 許可フラグ)、UNIT-401 InProcessQueue(`folly::ProducerConsumerQueue` SPSC、SRS-RCM-019 構造的実体)、UNIT-402 InterProcessChannel(gRPC over UDS、RCM-018 実装層)。**§5 IF 詳細設計(IEC 62304 §5.4.3 クラス C 必須):** IF-U-001〜010 のメッセージ型 struct 詳細(`ModeChangeRequest`/`BeamOnRequest`/`SetDoseTarget`/`MoveTurntable` 等)、IF-E-001/002/003 の Protocol Buffers proto3 スキーマ(Operator UI / Hardware Simulator / AuditLogger)を確定。**§6 共通型・データ構造:** `LifecycleState` 状態機械遷移許可表、`enum class ErrorCode` 階層(8 系統、上位 8 ビットで系統判定)、強い型実装方針(`explicit` コンストラクタ、`operator<=>` のみ提供、算術非提供)、`Result<T,E>` 実装、構成定義(校正値の外部化、HZ-007 構造的予防)、MessageBus SPSC/MPSC 選定。**§7 SOUP 使用箇所の UNIT レベル明示:** 13 件 SOUP + 追加予定 3 件(folly / gRPC+protobuf / TOML)を UNIT に割付、HZ-007 影響度を表化。**§8 詳細設計の検証(IEC 62304 §5.4.4 クラス C 必須):** 7 項目チェックリストを全クリア。**§9 トレーサビリティ:** SRS 全要求 → ARCH → UNIT → UT(計画 ID)を双方向で構築、RCM ↔ UNIT ↔ 検証手段の対応表(SRMP §6.1 / §7.1 と整合)。**(4) 派生ドキュメント整合化:** CIL v0.7 → v0.8(SDD v0.1 反映、§10 ベースライン履歴に `inc1-design-frozen` 行確定、§10.3 詳細スナップショット節新設)、CRR v0.5 → v0.6(本格運用第 4 例、CR-0004 を §4 本体表に登録、§5/§6/§7/§7.1/§7.2 反映、CR-0003 CLOSED 維持)、README の SDD/CIL/CRR 状態欄更新、DEVELOPMENT_STEPS v0.15(本 Step 追記)。**(5) `inc1-design-frozen` タグ付与:** ベースライン ID `BL-20260426-002`、Step 16 本体コミットに annotated tag、保護タグルール(GitHub Ruleset id 15519327 が `refs/tags/inc*-design-frozen` を含むことを確認済) |
+| 成果物 | SDD-TH25-001 v0.1(`5.4_software_detailed_design/software_detailed_design.md`)、CIL-TH25-001 v0.8、CRR-TH25-001 v0.6、README.md、DEVELOPMENT_STEPS.md v0.14 → v0.15、Git タグ `inc1-design-frozen`(ベースライン ID `BL-20260426-002`)、GitHub Issue #4(CR-0004) |
+| コミット | _(本 Step 本体コミット時に追記)_ |
+
+**採用根拠:**
+
+- **IEC 62304 §5.4 への対応:** 本書 §5.4.1〜§5.4.4 を全章カバーすることで、クラス C の詳細設計プロセスを実体化。クラス C 必須要求 §5.4.2(各ユニットの詳細設計)/ §5.4.3(IF の詳細設計)/ §5.4.4(詳細設計の検証)を Inc.1 範囲で全 UNIT に対し実体化
+- **順序として Step 15(SAD)→ Step 16(SDD + `inc1-design-frozen`)とした理由:**
+  - SDD §3 のユニット分解は SAD §4.3 の ARCH-NNN.x を直接的に詳細化する。SAD が項目レベル確定済(Step 15)であることが前提
+  - SDD §5 の IF 詳細(メッセージ型/Protocol Buffers スキーマ)は SAD §5 の IF-U/IF-E 一覧を直接詳細化する
+  - SCMP §5.1 のタグ命名規則では `inc{N}-design-frozen` は **設計凍結(SAD + SDD)** のタイミングで付与する。Step 15 では付与せず、Step 16 SDD 完了で付与するのが規約と整合
+- **`inc1-design-frozen` ベースライン ID `BL-20260426-002` の採番根拠:** 同日内 2 件目のベースラインのため `-002`。`-001` は Step 13 `inc1-requirements-frozen` で使用済
+- **タグ保護ルールの事前確認:** GitHub Ruleset id 15519327(SCMP §5.3 タグ保護)に `refs/tags/inc*-design-frozen` パターンが Step 12 時点で既に含まれていることを `gh api` で確認済。タグ付与時に自動的に削除/上書き禁止が適用される(追加設定不要)
+- **CCB 本格運用第 4 例としての位置づけ:**
+  - CR-0004 は CCB-TH25-001 v0.1 施行(2026-04-24)以降の 4 件目の本格 CR
+  - MAJOR 区分判定: 安全関連(クラス C 必須要件) / 詳細設計初版 / RCM 影響(全 RCM の UNIT 割付確定) / 並行処理関連(MessageBus 設計確定) / ベースライン凍結を伴う、の 5 項目該当
+  - 1 分インターバル(CCB §5.4)を SDD 作成所要時間で自然に充足(Issue 起票 2026-04-26T11:33:00Z → SDD 作成完了まで十分経過)
+  - PR を経ず直接コミット: SCMP §4.1.2 admin bypass 例外条件には厳密には該当しないが、Step 13/14/15 と同様「本格運用前のインフラ整備期間延長」と扱う。Step 17+ コード実装で通常 PR フロー化を再検討予定
+- **SDD §10 で残された未確定事項を明示:** MessageBus MPSC 実装(Inc.2)、Protocol Buffers ライブラリのバージョン、folly/TOML の `vcpkg.json` 追加、校正値(`DoseRatePerPulse_cGy_per_pulse` / `EnergyMagnetMap`)、Inc.4 UI フレームワークは Step 17+ コード実装時に確定する。本 SDD は **Step 17+ コード実装の唯一の根拠** として確立
+- **「本 SDD は Step 17+ コード実装の唯一の根拠」とした方針:** Inc.1 設計を `inc1-design-frozen` で凍結する以上、Step 17+ では本 SDD に記載のないものを実装してはならない。新たな設計判断が必要となった場合は CR + SDD 改訂(v0.1.1 / `inc1-design-frozen-v2`)で対応する
+
+**Therac-25 学習目的の含意:**
+
+- **Yakima Class3 オーバフロー類型(HZ-003)の構造的排除を UNIT レベルで完成:** UNIT-200 `PulseCounter` で `std::atomic<uint64_t>` を内包し、`fetch_add(PulseCount, std::memory_order_acq_rel)` のみ提供する設計を本 SDD で確定。`uint64_t` の最大値 2^64 - 1 ≒ 1.8 × 10^19 パルスは 1 kHz サンプリングで **5,800 万年連続照射相当** であり、実用上オーバフロー不可能。Therac-25 の `Class3` 8bit unsigned カウンタの 256 周期問題を構造的に発生不可能化
+- **Tyler 第 1 例 race condition(HZ-002)の検出/予防の機械的保証:** UNIT-401 `folly::ProducerConsumerQueue` の `is_lock_free() == true` を `static_assert` で表明、UNIT-200 `PulseCounter` の atomic lock-free 性も同様。SAD §9 SEP-001/SEP-003 で構造的に不可能化済の上で、SDD では「メッセージパッシングの境界値挙動(queue full/empty/容量超過)」を明示設計し、Inc.3 RCM-002 の TSan + モデル検査 + 境界値試験の 3 層検証(SRMP §6.1)の前提を確立
+- **East Texas MALFUNCTION 54 バイパス(HZ-006)の型レベル予防:** UNIT-200 `enum class ErrorCode` 8 系統階層 + `enum class Severity { Critical, High, Medium, Low }` で「バイパス可否を型レベルに表現」する設計を確定。Critical は `LifecycleState` を `Halted` に遷移させ物理的再起動を要する。Inc.4 UI 実装で完成する RCM-009/010 の構造的前提を確立
+- **HZ-001 直接対応の UNIT レベル詳細化:** UNIT-202 TreatmentModeManager のモード遷移許可表(SRS-002 の 6 ステップ)、UNIT-205 TurntableManager の 3 系統センサ集約(med-of-3)+ 偏差判定、UNIT-203 BeamController の許可フラグ `compare_exchange` 設計により、Tyler/Hamilton/East Texas で発現した HZ-001 を 3 段階で構造的に阻止
+- **HZ-007(レガシーコード再利用前提喪失)の継続予防:** SDD §7 で 13 件の SOUP + 追加予定 3 件を UNIT 単位で割付け、HZ-007 影響度(高/中/低)を表化。コンパイラ・標準ライブラリ更新時(SCMP §4.1 重大区分)に「どの UNIT のどの API が影響を受けるか」を即座に特定可能
+- **`inc1-design-frozen` ベースラインの意義:** Therac-25 では「設計判断の前提が後から無意識に変更される」ことが事故要因の一部を占めた(HZ-007、Therac-6/20 コード再利用時の前提喪失)。本プロジェクトでは `inc1-design-frozen`(BL-20260426-002)で SAD + SDD を Git タグ + 保護タグルール(削除/上書き禁止)で永続的に凍結することで、Step 17+ コード実装が常に本ベースラインを参照することを構造的に保証する。Inc.3 / Inc.4 で SDD 改訂が必要となった場合は、必ず CR 経由で `inc1-design-frozen-v2` 等の新タグを発行し、変更経緯を追跡可能に保つ
+
+---
+
 ## 次のステップ(予定)
 
 | Step | 内容 | 予定 |
 |------|------|------|
-| Step 16 | **SDD-TH25-001 v0.1 作成**。各ソフトウェアユニット(ARCH-NNN.x のユニットレベル)の詳細設計(クラス C 必須、IEC 62304 §5.4.2)、ユニット間 IF 詳細(§5.4.3、IF-U/IF-E のメッセージ型・スキーマ確定、`LifecycleState` 状態機械、`enum class ErrorCode` 階層、MessageBus の SPSC/MPSC 選定)、詳細設計の検証(§5.4.4)、`inc1-design-frozen` 確定 | 次回作業時 |
 | Step 17+ | **コード実装**(`src/th25_ctrl/` + `src/th25_sim/`)+ UT(GoogleTest、§5.5 / §5.5.4 クラス C 追加受入基準)+ IT + ST(§5.7.4 クラス C 妥当性確認) + `inc1-baseline` タグ付与 | Inc.1 後半 |
 
 ## 改訂履歴
@@ -511,3 +547,4 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 0.12 | 2026-04-26 | Step 14(Inc.1 C++20 プロジェクト骨格構築 + SOUP 正式選定 vcpkg、CR-0002 GitHub Issue #2)を追記。CIL v0.6 / CRR v0.4 / README / 新規ファイル群(`vcpkg.json` / `CMakeLists.txt` / `CMakePresets.json` / `.clang-tidy` / `.clang-format` / `src/th25_ctrl/` / `src/th25_sim/` / `tests/` / `.github/workflows/cpp-build.yml`)整合化。CCB 本格運用第 2 例として CR-0002 を MAJOR 区分で起票・処理。Step 13 完了報告で予告した CR-0001 の VERIFICATION → CLOSED 遷移を着手前事後処理コミット `ebc2f40` で実施。SOUP-001〜010/013〜015 を「予定」→ 正式登録(13 件)、ベースライン commit `c3867e714d...`(リリース 2026.03.18)で完全固定。「次のステップ(予定)」から Step 14 を削除し、Step 15(SAD)以降を更新 | k-abe |
 | 0.13 | 2026-04-26 | Step 14 のコミット欄に本体コミット `2bdc42d`、CI 修正コミット `550d383`(ubuntu-24.04 移行)、`262acd5`(clang-tidy 指摘修正)の実 SHA を追記(Step 15 着手前事後処理)。採用根拠の SCMP §4.1.2 直接コミット運用節も実態に合わせ微修正(当初 SHA 追記不要判断 → CI 修正発生により本書改訂で追記済み旨を記録) | k-abe |
 | 0.14 | 2026-04-26 | Step 15(Inc.1 SAD-TH25-001 v0.1 作成、CR-0003 GitHub Issue #3)を追記。CIL v0.7 / CRR v0.5 / README / 新規ファイル(`5.3_software_architecture_design/software_architecture_design.md` 0.1 → 正式化)整合化。CCB 本格運用第 3 例として CR-0003 を MAJOR 区分で起票・処理(5 項目該当: 安全関連 / アーキテクチャ変更初版 / RCM 影響 / 並行処理関連 / SOUP HW・SW 要求割付)。Step 14 完了報告で予告した CR-0002 の VERIFICATION → CLOSED 遷移は CRR v0.5 昇格に同梱(CI 全 Pass 確認後)。SAD §9 SEP-001(UI 層と安全コアの OS プロセス分離)+ SEP-003(共有変数禁止 + lock-free queue メッセージパッシング)で Therac-25 race condition の根本構造を **アーキテクチャ時点で構造的に不可能化**。SAD §7/§8 で SOUP 13 件の機能・性能要求 + HW/SW 要求を SRS への割付として記述(IEC 62304 §5.3.3/§5.3.4 クラス B/C 必須)。「次のステップ(予定)」から Step 15 を削除し、Step 16(SDD)以降を更新 | k-abe |
+| 0.15 | 2026-04-26 | Step 16(Inc.1 SDD-TH25-001 v0.1 作成 + `inc1-design-frozen` 確定、CR-0004 GitHub Issue #4)を追記。CIL v0.8 / CRR v0.6 / README / 新規ファイル(`5.4_software_detailed_design/software_detailed_design.md` 0.1 → 正式化)整合化。CCB 本格運用第 4 例として CR-0004 を MAJOR 区分で起票・処理(5 項目該当: 安全関連 / 詳細設計初版 / RCM 影響 / 並行処理関連 / ベースライン凍結を伴う)。SDD §3〜§9 で全 22 ユニット(Inc.1 中核 14 + Inc.2 空殻 1 + Inc.4 空殻 7)の詳細設計、IF-U-001〜010 メッセージ型 + IF-E-001〜003 Protocol Buffers proto3 スキーマ、`LifecycleState` 8 状態機械、`ErrorCode` 8 系統階層、`PulseCounter` `std::atomic<uint64_t>` で HZ-003 整数オーバフロー構造的排除を確定。**`inc1-design-frozen`(BL-20260426-002)を本 Step 本体コミットに付与し、Inc.1 設計を不可逆に凍結**(annotated tag、保護タグルール GitHub Ruleset id 15519327 が `refs/tags/inc*-design-frozen` を含むことを事前確認済)。Therac-25 主要因類型 B(整数オーバフロー)の構造的排除を初確認(累積 A:4 / B:1 新規 / D:2 / E:2 / F:4)。「次のステップ(予定)」から Step 16 を削除し、Step 17+(コード実装)のみを残す | k-abe |
