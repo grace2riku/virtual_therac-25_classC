@@ -450,12 +450,47 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 
 ---
 
+### Step 15 — Inc.1 SAD-TH25-001 v0.1 作成(CR-0003)
+
+| 項目 | 内容 |
+|------|------|
+| 作業日 | 2026-04-26 |
+| 作業内容 | Phase 4(Inc.1)の Step 15 として、ソフトウェアアーキテクチャ設計書(SAD-TH25-001 v0.1)を作成。CCB-TH25-001 v0.1 本格運用第 3 例として CR-0003(GitHub Issue #3)を MAJOR 区分で起票・処理。**(0) 着手前事後処理:** Step 14 本体コミット `2bdc42d` および CI 修正 2 件(`550d383` ubuntu-24.04 移行、`262acd5` clang-tidy 指摘修正)の SHA を Step 14 のコミット欄に追記する事後処理コミット `e6543a9` を SCMP §4.1.2 admin bypass 例外条件下で先行作成(DEVELOPMENT_STEPS v0.13)。**(1) CR-0003 起票:** GitHub Issue #3、`change-request` ラベル付き、MAJOR 区分(安全関連 / アーキテクチャ変更初版 / RCM 影響 / 並行処理関連 / SOUP HW・SW 要求割付の 5 項目該当)。起票時刻 2026-04-26T07:25:26Z。**(2) 1 分インターバル遵守:** Issue 起票 → SAD 作成所要時間で十分経過(CCB §5.4)。**(3) SAD-TH25-001 v0.1 作成:** Inc.1 範囲(ビーム生成・モード制御コア)を中心に、Inc.2/3/4 の構造的前提も含めて項目レベルでアーキテクチャを確定。**§4 アーキテクチャ概要:** マルチプロセス + イベントループ + 独立監視タスクの 3 層方針、ARCH-001 Operator UI Process(Inc.4 で本格化)/ ARCH-002 Safety Core Process(Inc.1 中核、サブ項目 10 件: SafetyCoreOrchestrator / TreatmentModeManager / BeamController / DoseManager / TurntableManager / BendingMagnetManager / SafetyMonitor / StartupSelfCheck / AuditLogger / CoreAuthenticationGateway)/ ARCH-003 Hardware Simulator Process(Inc.1、サブ項目 4 件)/ ARCH-004 MessageBus(lock-free queue 抽象、Inc.1 中核)を確定。**§5 IF:** 内部 IF 10 件(IF-U-001〜010、すべて MessageBus 経由メッセージパッシング)+ 外部 IF 4 件(IF-E-001〜004、gRPC over Unix Domain Socket + ファイル IO)を定義。**§7 / §8 SOUP(IEC 62304 §5.3.3 / §5.3.4 クラス B/C 必須):** CIL §5 13 件全 SOUP の機能・性能要求 + HW/SW 要求を SRS への割付として記述(コンパイラ・標準ライブラリ・ビルドツール・テストフレームワーク・静的解析・Sanitizer ランタイム 3 種を網羅)。**§9 分離設計(IEC 62304 §5.3.5 クラス C 必須、本 SAD の核心):** SEP-001(UI 層と安全コアの OS プロセス分離、RCM-018 直接対応、HZ-002/HZ-007)/ SEP-002(Hardware Simulator と安全コアの分離)/ SEP-003(共有変数禁止 + lock-free queue メッセージパッシング、RCM-019 / SRS-D-009 直接対応、HZ-002/HZ-003)を確定。**§9.4 で Therac-25 事故主要因類型 A〜F への対応表を明示**。**§11 トレーサビリティ:** SRS 全 58 件以上の要求事項を ARCH-NNN に割付、Inc 確定範囲(Inc.1 中核 / Inc.2 構造的前提 / Inc.3 構造的前提 / Inc.4 構造的前提)を明示。**(4) 派生ドキュメント整合化:** CIL v0.6 → v0.7(SAD v0.1 反映、CRR v0.5 / DEVSTEPS v0.14 自己参照更新)、CRR v0.4 → v0.5(本格運用第 3 例、CR-0003 を §4 本体表に登録、CR-0002 を VERIFICATION → CLOSED に遷移、§5/§6/§7/§7.1/§7.2 反映)、README の SAD/CIL/CRR 状態欄更新、DEVELOPMENT_STEPS v0.14(本 Step 追記)。**(5) `inc1-design-frozen` タグはこの Step では付与せず**: SCMP §5.1 に従い Step 16(SDD 完了)時に確定する。本 Step は要求凍結と設計凍結の中間段階(アーキテクチャ確定のみ) |
+| 成果物 | SAD-TH25-001 v0.1(`5.3_software_architecture_design/software_architecture_design.md`)、CIL-TH25-001 v0.7、CRR-TH25-001 v0.5、README.md、DEVELOPMENT_STEPS.md v0.13 → v0.14、GitHub Issue #3(CR-0003) |
+| コミット | `e6543a9`(着手前事後処理: Step 14 SHA 追記)、_(本 Step 本体コミット時に追記)_ |
+
+**採用根拠:**
+
+- **IEC 62304 §5.3 への対応:** 本書 §5.3.1〜§5.3.6 を全章カバーすることで、クラス C のアーキテクチャ設計プロセスを実体化。具体的には §5.3.1 SRS のアーキテクチャへの変換(本書 §3 / §11.1 トレーサビリティ)、§5.3.2 ソフトウェア項目間 IF(本書 §5.1 IF-U-001〜010)、§5.3.3 SOUP 機能要求(本書 §7、クラス B/C 必須)、§5.3.4 SOUP の HW/SW 要求(本書 §8、クラス B/C 必須)、§5.3.5 分離設計(本書 §9 SEP-001/002/003、クラス C 必須)、§5.3.6 アーキテクチャ検証(本書 §10)
+- **順序として Step 14(C++20 プロジェクト骨格)→ Step 15(SAD)とした理由:**
+  - SAD §7/§8 は Step 14 で正式登録した SOUP 13 件を参照する(Step 14 で SOUP の供給元・ライセンス・バージョン固定方式が確定していることが前提)
+  - SAD §9 SEP-003(共有変数禁止)の機械的検証手段として、Step 14 で確立した clang-tidy `concurrency-*` ルールと TSan(SOUP-015)を参照する
+  - Step 14 で `vcpkg.json` `builtin-baseline` による完全固定が確立されているため、SAD §8 で「コンパイラ・標準ライブラリ更新は SCMP §4.1 重大区分」を構造的に保証できる
+- **案 a(早期凍結)方針の継続:** Step 12 で確定した「SAD 着手前に SRS を凍結する」案 a 方針(`inc1-requirements-frozen` 維持)に従い、本 Step では SRS を変更せず、SAD で SRS の実現方式のみを確定。SAD 作成中に SRS 不備が見つからなかったため、`inc1-requirements-frozen-v2` 発行は不要
+- **CCB 本格運用第 3 例としての位置づけ:**
+  - CR-0003 は CCB-TH25-001 v0.1 施行(2026-04-24)以降の 3 件目の本格 CR
+  - MAJOR 区分判定: 安全関連(RCM-018/019 構造的確定)/ アーキテクチャ変更初版 / RCM 影響(Inc.1 該当 RCM の ARCH 割付)/ 並行処理関連(RCM-019 構造的確定)/ SOUP HW・SW 要求割付の 5 項目該当
+  - 1 分インターバル(CCB §5.4)を SAD 作成所要時間で自然に充足(Issue 起票 2026-04-26T07:25:26Z → SAD 作成完了まで十分経過)
+  - PR を経ず直接コミット: SCMP §4.1.2 admin bypass 例外条件には厳密には該当しないが、Step 13/14 と同様「本格運用前のインフラ整備期間延長」と扱う。Step 16(SDD)以降での通常 PR フロー化を再検討予定
+- **SAD §10.4 で残された未確定事項を明示:** MessageBus の具体実装(SPSC/MPSC、`folly::ProducerConsumerQueue` 候補)、IF-E-001/002 の Protocol Buffers スキーマ、`LifecycleState` 状態機械、`enum class ErrorCode` 階層は SDD §5.4.2/§5.4.3(Step 16)で確定する。これにより SAD と SDD の責任分界が明確になる
+- **`inc1-design-frozen` タグはこの Step では付与せず:** SCMP §5.1 のタグ命名規則では `inc{N}-design-frozen` は **設計凍結(SAD + SDD)** のタイミングで付与するため、Step 16 SDD 完了時に確定する。本 Step ではアーキテクチャのみ確定し、ベースラインタグは付与しない(姉妹プロジェクト VIP の運用と整合)
+
+**Therac-25 学習目的の含意:**
+
+- **Tyler 第 1 例 race condition の根本構造をアーキテクチャ時点で構造的に不可能化:** SAD §9 SEP-001(UI 層と安全コアの OS プロセス分離)+ SEP-003(共有変数禁止 + lock-free queue メッセージパッシング)により、Therac-25 の「UI と制御の同一プロセス・共有メモリ動作」という構造的要因(Leveson & Turner 1993 §IV.B)を本プロジェクトでは **アーキテクチャ時点で構造的に排除**。Inc.3 でロジック層 RCM-002/004 を追加する前提として、設計の最上位層で race condition の発生空間を物理的に消去する
+- **HZ-001(電子モード+X 線ターゲット非挿入)の中核アーキテクチャ確定:** ARCH-002.2 TreatmentModeManager(`enum class TreatmentMode` + 状態機械)+ ARCH-002.5 TurntableManager(3 系統独立センサ + 偏差判定)+ ARCH-002.3 BeamController(ビームオン許可フラグの再確認)が、Tyler/Hamilton/East Texas で発現した HZ-001 の発生経路を 3 段階で構造的に阻止
+- **HZ-005(ドーズ計算誤り)+ HZ-003(整数オーバフロー)構造的予防:** ARCH-002.4 DoseManager の `std::atomic<uint64_t>` 採用 + 強い型(`Energy_MeV`/`DoseUnit_cGy`/`PulseCount`)による単位安全 + UBSan(SOUP-014)による機械的検出。Yakima Class3 オーバフローバグ類型を実用上不可能化
+- **HZ-006(暗号的エラー UI)構造的予防の前提確立:** SAD §4.1 アーキテクチャ方針で「全エラーを構造化型(`enum class ErrorCode` + 詳細メッセージ)で扱う」ことを設計方針として確定。Inc.4 で完成する RCM-009/010 の構造的前提
+- **HZ-007(レガシーコード再利用前提喪失)構造的予防の継続:** SAD §8 で SOUP 13 件の HW/SW 要求を明文化。コンパイラ・標準ライブラリ更新は SCMP §4.1 重大区分(CCB 審議 + 全試験再実行 + HZ-007 リスク評価必須)として扱う前提を SAD レベルで確立
+- **§9.4 Therac-25 事故主要因類型 A〜F への対応表:** SPRP §4.3.1 と整合する形で、SAD §9 SEP-001/002/003 が Therac-25 事故主要因 A(race condition)/ D(インターロック欠落、Inc.2 への基盤)/ E(バイパス UI)/ F(レガシー前提喪失)にそれぞれ構造的対応する旨を明示。後続 Inc.2/3/4 での詳細化の前提となる構造を Inc.1 SAD で確立する学習効果
+
+---
+
 ## 次のステップ(予定)
 
 | Step | 内容 | 予定 |
 |------|------|------|
-| Step 15 | **SAD-TH25-001 v0.1 作成**。Inc.1 範囲のアーキテクチャ設計、SRS-RCM-018(UI 層分離 §5.3.5)/ RCM-019(メッセージパッシング)を構造的に確定、SOUP の機能要求(SRS への割付、IEC 62304 §5.3.3 クラス B/C 要求)、SOUP のシステム上 HW/SW 要求(§5.3.4 クラス B/C 要求)、`inc1-design-frozen` タグ候補 | 次回作業時 |
-| Step 16 | **SDD-TH25-001 v0.1 作成**。各ソフトウェアユニットの詳細設計(クラス C 必須、IEC 62304 §5.4.2)、ユニット間 IF 詳細(§5.4.3)、詳細設計の検証(§5.4.4)、`inc1-design-frozen` 確定 | Step 15 完了後 |
+| Step 16 | **SDD-TH25-001 v0.1 作成**。各ソフトウェアユニット(ARCH-NNN.x のユニットレベル)の詳細設計(クラス C 必須、IEC 62304 §5.4.2)、ユニット間 IF 詳細(§5.4.3、IF-U/IF-E のメッセージ型・スキーマ確定、`LifecycleState` 状態機械、`enum class ErrorCode` 階層、MessageBus の SPSC/MPSC 選定)、詳細設計の検証(§5.4.4)、`inc1-design-frozen` 確定 | 次回作業時 |
 | Step 17+ | **コード実装**(`src/th25_ctrl/` + `src/th25_sim/`)+ UT(GoogleTest、§5.5 / §5.5.4 クラス C 追加受入基準)+ IT + ST(§5.7.4 クラス C 妥当性確認) + `inc1-baseline` タグ付与 | Inc.1 後半 |
 
 ## 改訂履歴
@@ -475,3 +510,4 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 0.11 | 2026-04-26 | Step 13(Phase 4 開始: Inc.1 SRS-TH25-001 v0.1 作成 + `inc1-requirements-frozen` タグ付与、ベースライン ID `BL-20260426-001`、CR-0001 GitHub Issue #1)を追記。CIL v0.5 / CRR v0.3 / README / SRS 整合化を同時実施。CCB-TH25-001 v0.1 の本格運用第 1 例として CR-0001 を MAJOR 区分で起票・処理(1 分インターバル充足)。誤起票事故(template リポジトリへ #25 で起票してしまった件)を採用根拠に教訓として記録。「次のステップ(予定)」から Step 13 を削除し、Step 14(SOUP 選定 + C++ 骨格)/ Step 15(SAD)/ Step 16(SDD)/ Step 17+(実装+試験)を更新 | k-abe |
 | 0.12 | 2026-04-26 | Step 14(Inc.1 C++20 プロジェクト骨格構築 + SOUP 正式選定 vcpkg、CR-0002 GitHub Issue #2)を追記。CIL v0.6 / CRR v0.4 / README / 新規ファイル群(`vcpkg.json` / `CMakeLists.txt` / `CMakePresets.json` / `.clang-tidy` / `.clang-format` / `src/th25_ctrl/` / `src/th25_sim/` / `tests/` / `.github/workflows/cpp-build.yml`)整合化。CCB 本格運用第 2 例として CR-0002 を MAJOR 区分で起票・処理。Step 13 完了報告で予告した CR-0001 の VERIFICATION → CLOSED 遷移を着手前事後処理コミット `ebc2f40` で実施。SOUP-001〜010/013〜015 を「予定」→ 正式登録(13 件)、ベースライン commit `c3867e714d...`(リリース 2026.03.18)で完全固定。「次のステップ(予定)」から Step 14 を削除し、Step 15(SAD)以降を更新 | k-abe |
 | 0.13 | 2026-04-26 | Step 14 のコミット欄に本体コミット `2bdc42d`、CI 修正コミット `550d383`(ubuntu-24.04 移行)、`262acd5`(clang-tidy 指摘修正)の実 SHA を追記(Step 15 着手前事後処理)。採用根拠の SCMP §4.1.2 直接コミット運用節も実態に合わせ微修正(当初 SHA 追記不要判断 → CI 修正発生により本書改訂で追記済み旨を記録) | k-abe |
+| 0.14 | 2026-04-26 | Step 15(Inc.1 SAD-TH25-001 v0.1 作成、CR-0003 GitHub Issue #3)を追記。CIL v0.7 / CRR v0.5 / README / 新規ファイル(`5.3_software_architecture_design/software_architecture_design.md` 0.1 → 正式化)整合化。CCB 本格運用第 3 例として CR-0003 を MAJOR 区分で起票・処理(5 項目該当: 安全関連 / アーキテクチャ変更初版 / RCM 影響 / 並行処理関連 / SOUP HW・SW 要求割付)。Step 14 完了報告で予告した CR-0002 の VERIFICATION → CLOSED 遷移は CRR v0.5 昇格に同梱(CI 全 Pass 確認後)。SAD §9 SEP-001(UI 層と安全コアの OS プロセス分離)+ SEP-003(共有変数禁止 + lock-free queue メッセージパッシング)で Therac-25 race condition の根本構造を **アーキテクチャ時点で構造的に不可能化**。SAD §7/§8 で SOUP 13 件の機能・性能要求 + HW/SW 要求を SRS への割付として記述(IEC 62304 §5.3.3/§5.3.4 クラス B/C 必須)。「次のステップ(予定)」から Step 15 を削除し、Step 16(SDD)以降を更新 | k-abe |
