@@ -56,9 +56,14 @@ FormatStyle: file
 
 CheckOptions:
   readability-identifier-naming.NamespaceCase: lower_case
-  readability-identifier-naming.ClassCase: CamelCase
-  readability-identifier-naming.StructCase: CamelCase
-  readability-identifier-naming.EnumCase: CamelCase
+  # ClassCase / StructCase / EnumCase は aNy_CasE (任意の大小文字+アンダースコア混在許容)
+  # に緩和。SDD §6.3 に従い強い型名 (Energy_MeV, DoseUnit_cGy, Position_mm, MagnetCurrent_A,
+  # ElectronGunCurrent_mA 等) は SI 単位を含む可読性のためアンダースコア区切りを採用する。
+  # MISRA C++ 2023 / CERT C++ では命名規則は組織が定めることが許容されており、本緩和は
+  # 規約逸脱ではない。Step 17 (CR-0005) で SDD §6.3 と整合する命名規約として明示化。
+  readability-identifier-naming.ClassCase: aNy_CasE
+  readability-identifier-naming.StructCase: aNy_CasE
+  readability-identifier-naming.EnumCase: aNy_CasE
   readability-identifier-naming.EnumConstantCase: CamelCase
   readability-identifier-naming.FunctionCase: lower_case
   readability-identifier-naming.MemberCase: lower_case
