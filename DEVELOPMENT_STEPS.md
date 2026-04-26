@@ -392,7 +392,7 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 作業日 | 2026-04-26 |
 | 作業内容 | Phase 4(Inc.1 着手)の最初の Step として、CCB-TH25-001 v0.1 の本格運用を開始(`CR-0001`)し、SRS-TH25-001 v0.1 を作成。SCMP §5.1 に従い `inc1-requirements-frozen` タグを付与し、Inc.1 要求を SAD/SDD 着手前に不可逆に凍結(案 a 早期凍結方式)。**(1) CR-0001 起票:** GitHub Issue #1 として `change-request` ラベル付きで起票(MAJOR 区分: 安全関連 / 要求変更 / RCM 影響 / 並行処理関連の 4 項目該当)。**(2) 1 分インターバル遵守:** Issue 起票 2026-04-26T01:06:44Z → 本コミット作成時点で 1 分以上経過(SRS 作成所要時間で自然に充足、CCB §5.4)。**(3) SRS-TH25-001 v0.1 作成:** Inc.1 範囲(ビーム生成・モード制御コア)機能 12 件 + 性能 4 件 + 入出力 13 件 + IF 5 件 + アラーム 5 件 + セキュリティ 2 件 + ユーザビリティ 3 件 + データ 10 件 + 規制 4 件 + RCM 6 件を整備。HZ-001(電子モード+X 線ターゲット非挿入、Tyler/Hamilton/East Texas 直接対応)+ HZ-005(線量計算誤り)直接対応、構造的 RCM-018(UI 層と安全コア分離 §5.3.5)/ RCM-019(タスク間メッセージパッシング)を要求化。SRS-D-009 で共有変数の `std::atomic`/`std::mutex` 保護必須をコーディング規約として明示。SRS-UX-001/002 で "MALFUNCTION 54" 暗号的コード単独表示を禁止し HZ-006 への構造的予防確立。**(4) 派生ドキュメント整合化:** CIL v0.4 → v0.5(SRS v0.1 反映、§10.2 inc1-requirements-frozen 詳細スナップショット節新設)、CRR v0.2 → v0.3(本格運用開始版、CR-0001 を §4 本体表に最初のエントリとして登録、§5/§6/§7/§7.1/§7.2 に反映)、README の SRS/CIL/CRR 状態欄更新、DEVELOPMENT_STEPS v0.11(本 Step 追記)。**(5) `inc1-requirements-frozen` タグ付与:** ベースライン ID `BL-20260426-001`、Step 13 本体コミットに annotated tag、保護タグルール(Step 12 で設定済の Ruleset id 15519327、`inc*-requirements-frozen` パターン適用済) |
 | 成果物 | SRS-TH25-001 v0.1(`5.2_software_requirements_analysis/software_requirements_specification.md`)、CIL-TH25-001 v0.5、CRR-TH25-001 v0.3、README.md、DEVELOPMENT_STEPS.md v0.10 → v0.11、Git タグ `inc1-requirements-frozen`(ベースライン ID `BL-20260426-001`)、GitHub Issue #1(CR-0001) |
-| コミット | _(本 Step コミット時に追記)_ |
+| コミット | `201b0b1` — docs(5.2): SRS-TH25-001 v0.1 を作成 (Inc.1 範囲, CR-0001, Step 13) |
 
 **採用根拠:**
 
