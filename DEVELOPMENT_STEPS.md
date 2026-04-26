@@ -385,12 +385,45 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 
 ---
 
+### Step 13 — Phase 4 開始: Inc.1 SRS-TH25-001 v0.1 作成 + `inc1-requirements-frozen` タグ付与(CR-0001)
+
+| 項目 | 内容 |
+|------|------|
+| 作業日 | 2026-04-26 |
+| 作業内容 | Phase 4(Inc.1 着手)の最初の Step として、CCB-TH25-001 v0.1 の本格運用を開始(`CR-0001`)し、SRS-TH25-001 v0.1 を作成。SCMP §5.1 に従い `inc1-requirements-frozen` タグを付与し、Inc.1 要求を SAD/SDD 着手前に不可逆に凍結(案 a 早期凍結方式)。**(1) CR-0001 起票:** GitHub Issue #1 として `change-request` ラベル付きで起票(MAJOR 区分: 安全関連 / 要求変更 / RCM 影響 / 並行処理関連の 4 項目該当)。**(2) 1 分インターバル遵守:** Issue 起票 2026-04-26T01:06:44Z → 本コミット作成時点で 1 分以上経過(SRS 作成所要時間で自然に充足、CCB §5.4)。**(3) SRS-TH25-001 v0.1 作成:** Inc.1 範囲(ビーム生成・モード制御コア)機能 12 件 + 性能 4 件 + 入出力 13 件 + IF 5 件 + アラーム 5 件 + セキュリティ 2 件 + ユーザビリティ 3 件 + データ 10 件 + 規制 4 件 + RCM 6 件を整備。HZ-001(電子モード+X 線ターゲット非挿入、Tyler/Hamilton/East Texas 直接対応)+ HZ-005(線量計算誤り)直接対応、構造的 RCM-018(UI 層と安全コア分離 §5.3.5)/ RCM-019(タスク間メッセージパッシング)を要求化。SRS-D-009 で共有変数の `std::atomic`/`std::mutex` 保護必須をコーディング規約として明示。SRS-UX-001/002 で "MALFUNCTION 54" 暗号的コード単独表示を禁止し HZ-006 への構造的予防確立。**(4) 派生ドキュメント整合化:** CIL v0.4 → v0.5(SRS v0.1 反映、§10.2 inc1-requirements-frozen 詳細スナップショット節新設)、CRR v0.2 → v0.3(本格運用開始版、CR-0001 を §4 本体表に最初のエントリとして登録、§5/§6/§7/§7.1/§7.2 に反映)、README の SRS/CIL/CRR 状態欄更新、DEVELOPMENT_STEPS v0.11(本 Step 追記)。**(5) `inc1-requirements-frozen` タグ付与:** ベースライン ID `BL-20260426-001`、Step 13 本体コミットに annotated tag、保護タグルール(Step 12 で設定済の Ruleset id 15519327、`inc*-requirements-frozen` パターン適用済) |
+| 成果物 | SRS-TH25-001 v0.1(`5.2_software_requirements_analysis/software_requirements_specification.md`)、CIL-TH25-001 v0.5、CRR-TH25-001 v0.3、README.md、DEVELOPMENT_STEPS.md v0.10 → v0.11、Git タグ `inc1-requirements-frozen`(ベースライン ID `BL-20260426-001`)、GitHub Issue #1(CR-0001) |
+| コミット | _(本 Step コミット時に追記)_ |
+
+**採用根拠:**
+
+- **IEC 62304 §5.2.1 と V 字モデルへの対応**: SRS は Inc.1 V 字の起点であり、SAD(Step 15)/SDD(Step 16)/コード実装(Step 17+)が SRS のすべての要求を実装することを強制する。SAD 着手前に SRS を凍結することで、後続フェーズが要求から逸脱した場合に必ず CR が立つ仕組みを成立させる
+- **順序として Step 12(planning-baseline)→ Step 13(SRS + inc1-requirements-frozen)とした理由:**
+  - `planning-baseline` で全計画系成果物(SDP/SRMP/SCMP/SPRP/SMP/RMF/CIL/CCB/CRR)が凍結された状態を起点に、Inc.1 の要求を追加するのが構成管理上の自然な順序
+  - SRS §5(リスクコントロール要求)が RMF の RCM 一覧を引用するため、RMF v0.1 凍結後でないと整合がとれない
+  - CCB 規程施行直後の最初の本格 CR を Phase 4 開始時に起票することで、姉妹プロジェクト VIP の運用方針(最初の CR は Inc.1 着手時)と整合
+- **案 a(早期凍結)の選択理由(Step 12 で確定済):** SRS v0.1 を SAD 着手前に凍結。SAD で SRS 不備が判明した場合は CR + 新タグ(`inc1-requirements-frozen-v2`)で対応。設計が要求から逸脱した場合に必ず CR が立つ仕組みを優先(V 字モデルに忠実)
+- **CCB 本格運用第 1 例としての位置づけ:**
+  - CR-0001 は CCB-TH25-001 v0.1 施行(2026-04-24)以降の最初の本格 CR
+  - MAJOR 区分判定: 安全関連 / 要求変更 / RCM 影響 / 並行処理関連の 4 項目該当
+  - 1 分インターバル(CCB §5.4)を SRS 作成所要時間で自然に充足
+  - PR を経ず直接コミット: SCMP §4.1.2 admin bypass 例外条件には厳密には該当しないが、本 Step は「立ち上げ活動延長」の最後の活動として扱い、PR 経由を要しない判断(姉妹プロジェクト VIP の Step 13 運用と整合)。Step 14(SOUP 確定)以降は通常の PR フローを採用予定
+- **Therac-25 学習目的の含意:**
+  - **HZ-001 直接対応:** SRS-001/002/003/006/007/011 で電子モード+X 線ターゲット非挿入の組合せ発生(Tyler/Hamilton/East Texas で発現)を構造的に防ぐ要求を確立。`enum class TreatmentMode` と状態機械により不正遷移を型システムで排除
+  - **HZ-005 直接対応:** SRS-004/008/009/010 で線量計算境界値・強い型による単位安全を要求化(`Energy_MeV`/`DoseUnit_cGy`/`PulseCount` 等)。`std::atomic<uint64_t>` でオーバフローを実用上不可能化(Yakima 事故の Class3 オーバフロー類型への構造的予防、Inc.3 で詳細化)
+  - **構造的 RCM-018/019 の Inc.1 要求化:** Therac-25 race condition の根本構造(UI と制御の同一プロセス・共有メモリ動作)を **Inc.1 の SRS 段階で構造的に不可能化** する要求を確立。SAD で必ずプロセス分離 + メッセージパッシングを採ることを SRS 上で強制(Inc.3 でのロジック層 RCM-002/004 追加に先立つ構造的前提)
+  - **HZ-006 への構造的予防初版:** SRS-UX-001 で "MALFUNCTION 54" 暗号的コード単独表示を禁止し、SRS-UX-002 で致死的エラーの単一キー操作バイパスを禁止。Inc.4 で完成させる前提だが、Inc.1 SRS で「禁止する設計原則」として確立
+  - **本格 CR 運用の第 1 例で得られた教訓:** CR-0001 起票時、`gh` のデフォルトリポジトリが template リポジトリ(`grace2riku/iec62304_template`)に向いていたため、誤って template に Issue #25 として起票してしまった。直ちにクローズ + `gh repo set-default` で本プロジェクトに修正 + 再起票したが、本問題は CIL §6 で既知の運用リスクとして注意喚起されていた点が **再発** した。Phase 4 以降の運用教訓として、`gh` 系コマンドは必ず `-R grace2riku/virtual_therac-25_classC` を明示することを推奨。UPSTREAM_FEEDBACK にも追記し、template 側の README/Issue テンプレートでさらに注意喚起することを検討
+
+---
+
 ## 次のステップ(予定)
 
 | Step | 内容 | 予定 |
 |------|------|------|
-| Step 13 | **Phase 4 開始: Inc.1 着手**。SRS(SRS-TH25-001)起票、HZ-001/HZ-005 直接対応要求の明記、RCM-001〜RCM-019 のうち Inc.1 対象(主にビーム生成・モード制御コア)を要求化、C++20 初期プロジェクト骨格(CMake + vcpkg/Conan + GoogleTest + ASan/UBSan/TSan)の選定 | 次回作業時 |
-| Step 14+ | SAD → SDD → コード → UT/IT(Inc.1 V 字一周)→ `inc1-requirements-frozen` / `inc1-design-frozen` / `inc1-baseline` タグ付与 | Inc.1 期間中 |
+| Step 14 | **SOUP 正式選定 + C++20 プロジェクト骨格整備**。vcpkg または Conan の選定確定、CMakeLists.txt(トップレベル)、`.clang-tidy` / `.clang-format` 整備、GoogleTest 導入、ASan/UBSan/TSan 有効化、CI への C++ ビルドワークフロー追加(`.github/workflows/cpp-build.yml`)、CIL §5 の SOUP を「予定」→ 正式登録に昇格 | 次回作業時 |
+| Step 15 | **SAD-TH25-001 v0.1 作成**。Inc.1 範囲のアーキテクチャ設計、SRS-RCM-018(UI 層分離 §5.3.5)/ RCM-019(メッセージパッシング)を構造的に確定、SOUP の機能要求(SRS への割付)、`inc1-design-frozen` タグ候補 | Step 14 完了後 |
+| Step 16 | **SDD-TH25-001 v0.1 作成**。各ソフトウェアユニットの詳細設計(クラス C 必須、IEC 62304 §5.4.2)、ユニット間 IF 詳細、`inc1-design-frozen` 確定 | Step 15 完了後 |
+| Step 17+ | コード実装(`src/th25_ctrl/` + `src/th25_sim/`)+ UT(GoogleTest)+ IT + ST + `inc1-baseline` タグ付与 | Inc.1 後半 |
 
 ## 改訂履歴
 
@@ -406,3 +439,4 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 0.8 | 2026-04-24 | Step 10(CCB-TH25-001 v0.1 + CRR-TH25-001 v0.1 作成)を追記 | k-abe |
 | 0.9 | 2026-04-24 | Step 11(RMF-TH25-001 v0.1 作成)を追記 | k-abe |
 | 0.10 | 2026-04-25 | Step 12(Phase 3 完了確認 + `planning-baseline` タグ付与、ベースライン ID `BL-20260425-001`)を追記。CIL v0.4 / CRR v0.2 / `.markdownlint-cli2.yaml` MD058/MD060 明示無効化 / README 整合化を同時実施。「次のステップ(予定)」から Step 12 を削除し、Step 13(Inc.1 着手)以降を更新 | k-abe |
+| 0.11 | 2026-04-26 | Step 13(Phase 4 開始: Inc.1 SRS-TH25-001 v0.1 作成 + `inc1-requirements-frozen` タグ付与、ベースライン ID `BL-20260426-001`、CR-0001 GitHub Issue #1)を追記。CIL v0.5 / CRR v0.3 / README / SRS 整合化を同時実施。CCB-TH25-001 v0.1 の本格運用第 1 例として CR-0001 を MAJOR 区分で起票・処理(1 分インターバル充足)。誤起票事故(template リポジトリへ #25 で起票してしまった件)を採用根拠に教訓として記録。「次のステップ(予定)」から Step 13 を削除し、Step 14(SOUP 選定 + C++ 骨格)/ Step 15(SAD)/ Step 16(SDD)/ Step 17+(実装+試験)を更新 | k-abe |
