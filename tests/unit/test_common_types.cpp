@@ -27,6 +27,20 @@
 namespace th25_ctrl {
 
 // ============================================================================
+// 検出用 concept (UT-200-09 で算術演算子の非提供を SFINAE-friendly に検証).
+// 関数本体内に直接 requires 式を書くと clang-17 / gcc-13 では SFINAE 文脈外と
+// なりコンパイルエラーになるため、concept にラップして SFINAE 文脈に持ち込む.
+// ============================================================================
+namespace detail {
+template <typename T>
+concept HasPlusOp = requires(T a, T b) { a + b; };
+template <typename T>
+concept HasMinusOp = requires(T a, T b) { a - b; };
+template <typename T>
+concept HasMulOp = requires(T a, T b) { a * b; };
+}  // namespace detail
+
+// ============================================================================
 // UT-200-01: enum class TreatmentMode 値・型安全
 // ============================================================================
 TEST(CommonTypes_TreatmentMode, EnumValuesAreStable) {
@@ -165,13 +179,14 @@ TEST(CommonTypes_StrongType, ComparisonOperatorsAreProvided) {
 
 TEST(CommonTypes_StrongType, ArithmeticOperatorsAreNotProvided) {
     // SDD §6.3: 算術演算子 (+, -, *, /) は提供しない (単位混在の危険).
-    // Compile-time check using SFINAE-style detection.
-    constexpr bool has_plus = requires(Energy_MeV a, Energy_MeV b) { a + b; };
-    constexpr bool has_minus = requires(Energy_MeV a, Energy_MeV b) { a - b; };
-    constexpr bool has_mul = requires(Energy_MeV a, Energy_MeV b) { a * b; };
-    static_assert(!has_plus, "Energy_MeV must NOT support operator+ (RCM-008).");
-    static_assert(!has_minus, "Energy_MeV must NOT support operator- (RCM-008).");
-    static_assert(!has_mul, "Energy_MeV must NOT support operator* (RCM-008).");
+    // Compile-time SFINAE check via detail:: concept (RCM-008).
+    static_assert(!detail::HasPlusOp<Energy_MeV>,
+        "Energy_MeV must NOT support operator+ (RCM-008).");
+    static_assert(!detail::HasMinusOp<Energy_MeV>,
+        "Energy_MeV must NOT support operator- (RCM-008).");
+    static_assert(!detail::HasMulOp<Energy_MeV>,
+        "Energy_MeV must NOT support operator* (RCM-008).");
+    SUCCEED() << "Compile-time arithmetic-non-availability checks passed.";
 }
 
 TEST(CommonTypes_StrongType, DoseUnitAddDoseAccumulatesOnly) {
