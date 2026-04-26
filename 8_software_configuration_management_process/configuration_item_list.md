@@ -299,7 +299,7 @@ SCMP-TH25-001 §5.2 の「ベースライン状態記録」に従い、Inc.1 設
 | ベースライン ID | `BL-20260426-002` |
 | Git タグ | `inc1-design-frozen` |
 | ベースライン日 | 2026-04-26 |
-| Git コミット | (Step 16 本体コミット時に追記) |
+| Git コミット | `addc14ab4679591dbf55b52b04d534a2c77f9271`(短縮: `addc14a`)|
 | 目的 | Inc.1(ビーム生成・モード制御コア)の **設計フェーズを不可逆に凍結**。SAD でアーキテクチャ要素 ARCH-001〜004 + IF-U/IF-E + SEP-001/002/003 を確定済(`inc1-requirements-frozen` の上に積層)、SDD で全 22 ユニット(UNIT-101〜104 / 200〜210 / 301〜304 / 401〜402)の詳細設計 + IF メッセージ型/Protocol Buffers スキーマ + `LifecycleState` 状態機械 + `ErrorCode` 階層 + 強い型実装方針を確定。クラス C 必須要求(IEC 62304 §5.4.2/§5.4.3/§5.4.4)を全章カバー |
 | 承認者・承認日 | k-abe、2026-04-26 |
 | 関連 CR | CR-0003(GitHub Issue #3)— SAD-TH25-001 v0.1 作成、MAJOR、CCB 本格運用第 3 例 / CR-0004(GitHub Issue #4)— SDD-TH25-001 v0.1 作成 + `inc1-design-frozen` 確定、MAJOR、CCB 本格運用第 4 例 |
