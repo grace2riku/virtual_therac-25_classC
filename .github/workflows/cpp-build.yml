@@ -1,0 +1,129 @@
+name: C++ Build (Inc.1)
+
+# Inc.1 から導入する C++20 ビルド・試験 CI(SCMP §4.3 / SRMP §6.1 に準拠).
+# 各 Sanitizer(ASan / UBSan / TSan)を独立ジョブで実行し、Therac-25 race
+# condition 直接対応(HZ-002, RCM-002/004/019)を機械的に検証する基盤を確立する.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - "vcpkg.json"
+      - "vcpkg-configuration.json"
+      - ".clang-tidy"
+      - ".clang-format"
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/cpp-build.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - "vcpkg.json"
+      - "vcpkg-configuration.json"
+      - ".clang-tidy"
+      - ".clang-format"
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/cpp-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.compiler }} / ${{ matrix.preset }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [clang-17, gcc-13]
+        preset: [debug, asan, ubsan, tsan]
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja and toolchain (clang-17)
+        if: matrix.compiler == 'clang-17'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build clang-17 clang-tidy-17 clang-format-17 \
+            llvm-17 lld-17 libc++-17-dev libc++abi-17-dev
+          echo "CC=clang-17"   >> "$GITHUB_ENV"
+          echo "CXX=clang++-17" >> "$GITHUB_ENV"
+
+      - name: Install Ninja and toolchain (gcc-13)
+        if: matrix.compiler == 'gcc-13'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build gcc-13 g++-13
+          echo "CC=gcc-13" >> "$GITHUB_ENV"
+          echo "CXX=g++-13" >> "$GITHUB_ENV"
+
+      - name: Bootstrap vcpkg at fixed baseline
+        run: |
+          set -euo pipefail
+          git clone https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+          (cd "$VCPKG_ROOT" && git checkout c3867e714dd3a51c272826eea77267876517ed99)
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+
+      - name: Configure (CMake preset ${{ matrix.preset }})
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }}
+
+  clang-tidy:
+    name: clang-tidy (clang-17)
+    runs-on: ubuntu-22.04
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build clang-17 clang-tidy-17 \
+            llvm-17 libc++-17-dev libc++abi-17-dev
+          echo "CC=clang-17"   >> "$GITHUB_ENV"
+          echo "CXX=clang++-17" >> "$GITHUB_ENV"
+
+      - name: Bootstrap vcpkg at fixed baseline
+        run: |
+          set -euo pipefail
+          git clone https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+          (cd "$VCPKG_ROOT" && git checkout c3867e714dd3a51c272826eea77267876517ed99)
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+
+      - name: Configure (debug preset for compile_commands.json)
+        run: cmake --preset debug
+
+      - name: Run clang-tidy on src/ and tests/
+        run: |
+          set -euo pipefail
+          # compile_commands.json 経由で src/ と tests/ のみを検査する.
+          # SOUP のヘッダは HeaderFilterRegex で除外済(.clang-tidy 参照).
+          mapfile -t files < <(git ls-files 'src/**/*.cpp' 'src/**/*.hpp' \
+                                            'tests/**/*.cpp' 'tests/**/*.hpp')
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No C++ files to check."
+            exit 0
+          fi
+          clang-tidy-17 \
+            --config-file=.clang-tidy \
+            -p build/debug \
+            "${files[@]}"

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "th25-ctrl",
+  "version-string": "0.2.0",
+  "description": "Therac-25 Virtual Control Software (TH25-CTRL) — IEC 62304 Class C learning project (Inc.1).",
+  "homepage": "https://github.com/grace2riku/virtual_therac-25_classC",
+  "license": null,
+  "supports": "(linux | osx) & (x64 | arm64)",
+  "builtin-baseline": "c3867e714dd3a51c272826eea77267876517ed99",
+  "dependencies": [
+    {
+      "name": "gtest",
+      "version>=": "1.14.0"
+    }
+  ]
+}

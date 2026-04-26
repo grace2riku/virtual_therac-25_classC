@@ -1,0 +1,123 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 28,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "Debug (no sanitizer)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "relwithdebinfo",
+            "displayName": "RelWithDebInfo",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "asan",
+            "displayName": "Debug + AddressSanitizer (HZ-005 / general memory safety)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "TH25_SANITIZER": "address"
+            }
+        },
+        {
+            "name": "ubsan",
+            "displayName": "Debug + UndefinedBehaviorSanitizer (HZ-005 / HZ-007)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "TH25_SANITIZER": "undefined"
+            }
+        },
+        {
+            "name": "tsan",
+            "displayName": "Debug + ThreadSanitizer (HZ-002 race condition direct response, RCM-002/004/019)",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "TH25_SANITIZER": "thread"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "debug",
+            "configurePreset": "debug"
+        },
+        {
+            "name": "relwithdebinfo",
+            "configurePreset": "relwithdebinfo"
+        },
+        {
+            "name": "asan",
+            "configurePreset": "asan"
+        },
+        {
+            "name": "ubsan",
+            "configurePreset": "ubsan"
+        },
+        {
+            "name": "tsan",
+            "configurePreset": "tsan"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "debug",
+            "configurePreset": "debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "asan",
+            "configurePreset": "asan",
+            "output": {
+                "outputOnFailure": true
+            },
+            "environment": {
+                "ASAN_OPTIONS": "halt_on_error=1:abort_on_error=1:print_summary=1:detect_leaks=1"
+            }
+        },
+        {
+            "name": "ubsan",
+            "configurePreset": "ubsan",
+            "output": {
+                "outputOnFailure": true
+            },
+            "environment": {
+                "UBSAN_OPTIONS": "halt_on_error=1:abort_on_error=1:print_stacktrace=1"
+            }
+        },
+        {
+            "name": "tsan",
+            "configurePreset": "tsan",
+            "output": {
+                "outputOnFailure": true
+            },
+            "environment": {
+                "TSAN_OPTIONS": "halt_on_error=1:second_deadlock_stack=1:report_thread_leaks=1"
+            }
+        }
+    ]
+}

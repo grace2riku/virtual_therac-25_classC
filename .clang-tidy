@@ -1,0 +1,72 @@
+# clang-tidy configuration for TH25-CTRL (IEC 62304 Class C, C++20).
+#
+# Categories enabled (SDP-TH25-001 §6.1, SCMP-TH25-001 §3.2):
+#   - bugprone-*    : potential bugs (uninitialized, narrowing, shadowing, etc.)
+#   - cert-*        : CERT C++ Secure Coding Standard
+#   - concurrency-* : threading misuse (HZ-002 race condition direct response)
+#   - cppcoreguidelines-* : C++ Core Guidelines (subset; some checks disabled below)
+#   - hicpp-*       : High Integrity C++ (subset; overlap with cppcoreguidelines)
+#   - misc-*        : miscellaneous defensive checks
+#   - modernize-*   : modernize to C++20 idioms
+#   - performance-* : performance pitfalls
+#   - portability-* : portability concerns
+#   - readability-* : readability (subset)
+#
+# Selectively disabled checks rationale:
+#   - cppcoreguidelines-pro-*-array : std::array vs C array tradeoffs are project-specific
+#   - cppcoreguidelines-avoid-magic-numbers / readability-magic-numbers : tests use literal values
+#   - modernize-use-trailing-return-type : not enforced (style preference)
+#   - readability-identifier-length : strong-typed wrappers may have short names (e.g., `mA`)
+#
+# Therac-25 関連:
+#   - concurrency-mt-unsafe : RCM-002/004/019 共有変数アクセスの機械的検出
+#   - bugprone-narrowing-conversions : RCM-008 ドーズ計算境界値・型による単位安全
+#   - bugprone-integer-division : HZ-003 整数オーバフロー類型の予防補強
+
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  hicpp-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -modernize-use-trailing-return-type,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -hicpp-vararg,
+  -cppcoreguidelines-pro-type-vararg,
+  -misc-non-private-member-variables-in-classes,
+  -misc-include-cleaner
+
+WarningsAsErrors: ""
+
+HeaderFilterRegex: "^(src|tests)/.*\\.(h|hpp|hxx)$"
+
+FormatStyle: file
+
+CheckOptions:
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.FunctionCase: lower_case
+  readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: _
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.GlobalConstantCase: UPPER_CASE
+  readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
+  readability-function-cognitive-complexity.Threshold: 25
+  cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true
+  cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions: false
+  modernize-use-default-member-init.UseAssignment: false

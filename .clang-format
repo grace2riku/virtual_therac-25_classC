@@ -1,0 +1,47 @@
+# clang-format configuration for TH25-CTRL (C++20, LLVM-based).
+# Reference: SDP-TH25-001 §6.1.
+
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+ContinuationIndentWidth: 4
+
+AccessModifierOffset: -4
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+
+BreakBeforeBraces: Attach
+BreakBeforeBinaryOperators: NonAssignment
+AlignAfterOpenBracket: Align
+
+BinPackArguments: false
+BinPackParameters: false
+
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^"th25_(ctrl|sim)/'
+    Priority: 1
+  - Regex: '^"'
+    Priority: 2
+  - Regex: '^<gtest/'
+    Priority: 3
+  - Regex: '^<[^/]+>'
+    Priority: 4
+  - Regex: '^<.+>'
+    Priority: 5
+
+SortIncludes: CaseSensitive
+SortUsingDeclarations: true
+
+NamespaceIndentation: None
+FixNamespaceComments: true

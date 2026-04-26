@@ -416,14 +416,47 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 
 ---
 
+### Step 14 — Inc.1 C++20 プロジェクト骨格構築 + SOUP 正式選定(CR-0002)
+
+| 項目 | 内容 |
+|------|------|
+| 作業日 | 2026-04-26 |
+| 作業内容 | Phase 4(Inc.1)の Step 14 として、C++20 プロジェクトのビルドシステム・SOUP・テストフレームワーク・Sanitizer・CI ワークフローを正式に整備。CCB-TH25-001 v0.1 本格運用第 2 例として CR-0002(GitHub Issue #2)を MAJOR 区分で起票・処理。**(0) 着手前事後処理:** Step 13 完了報告で予告した CRR §4 本体表の CR-0001 状態を VERIFICATION → CLOSED に遷移する事後記録コミット `ebc2f40` を SCMP §4.1.2 admin bypass 例外条件下で先行作成。**(1) CR-0002 起票:** GitHub Issue #2、`change-request` ラベル付き、MAJOR 区分(SOUP 追加・コンパイラ標準ライブラリ初登録・並行処理関連 RCM の検証手段確立・CI 重大変更の 4 項目該当)。**(2) 1 分インターバル遵守:** Issue 起票 2026-04-26T03:05:17Z → 本体コミット作成時点で十分経過(Step 14 主作業所要時間で自然に充足、CCB §5.4)。**(3) SOUP 選定 vcpkg(`vcpkg.json` 作成):** マニフェストモード、`builtin-baseline` で microsoft/vcpkg の commit `c3867e714dd3a51c272826eea77267876517ed99`(リリース 2026.03.18)を完全固定、依存 GoogleTest 1.14+。**(4) CMake 骨格:** `CMakeLists.txt`(C++20 / strict warnings / `TH25_SANITIZER` オプション / `TH25_BUILD_TESTS` オプション)+ `CMakePresets.json`(debug / relwithdebinfo / asan / ubsan / tsan の 5 プリセット、Sanitizer ランタイムオプションを各 testPreset で固定)。**(5) 静的解析・整形:** `.clang-tidy`(`bugprone-*` / `cert-*` / `concurrency-*` / `cppcoreguidelines-*` / `hicpp-*` / `misc-*` / `modernize-*` / `performance-*` / `portability-*` / `readability-*` を有効化、ID 命名規則・cognitive complexity 25 を設定)+ `.clang-format`(LLVM ベース、C++20、ColumnLimit 100、IncludeBlocks 整備)。**(6) ソースプレースホルダ:** `src/th25_ctrl/include/th25_ctrl/version.hpp` + `version.cpp`、`src/th25_sim/include/th25_sim/sim_stub.hpp` + `sim_stub.cpp`(Inc.1 ビルドシステム成立用、本格実装は Step 17+)。**(7) スモークテスト:** `tests/unit/test_smoke.cpp`(GoogleTest 経由 3 アサーション、ローカル AppleClang 15 でビルド検証済)。**(8) CI ワークフロー:** `.github/workflows/cpp-build.yml`(Ubuntu 22.04 + clang-17 / gcc-13、各プリセット × 2 コンパイラ = 8 ジョブのマトリクス + clang-tidy ジョブ)。**(9) CIL v0.5 → v0.6 昇格:** §3 SRC-001/005 をプレースホルダ実装段階に、§5 SOUP-001〜010/013〜015 を「予定」→ 正式登録(13 件)、§5.2 バージョン固定方式を確定文に更新、§6 ツール 008〜014/017 を運用中に、§7 CFG 009〜014 を運用中に、§4 自己参照(CIL v0.6、DEVSTEPS v0.12)更新、§11 改訂履歴 v0.6 追記。**(10) CRR v0.3 → v0.4 昇格:** §2 参照文書 [7] CIL v0.6、§4 本体表に CR-0002 を 2 件目のエントリとして登録、§5 安全関連 CR 抽出表に CR-0002 を追加、§6 リリース別 v0.2.0 サマリに CR-0002 を仮登録、§7 集計表に Step 14 完了時行追加(累積: 総 CR 2 / MAJOR 2 / 安全関連 2)、§7.1 主要因類型別 A: 2 / F: 2 (累積)、§7.2 Sanitizer 基盤確立(実検出 0、TSan Pass 遵守率 100% 期待)、§9 改訂履歴 v0.4 追記。**(11) README 更新:** §箇条 8 で CIL v0.6 / CRR v0.4 の状態欄、§技術スタック節を「(予定)」→ 確定状態(状態列追加、各ツールの確定/予定を明示)、§ローカル事前確認に C++ ビルド手順追加 |
+| 成果物 | `vcpkg.json`(新規)、`CMakeLists.txt`(新規)、`CMakePresets.json`(新規)、`.clang-tidy`(新規)、`.clang-format`(新規)、`src/th25_ctrl/CMakeLists.txt` + `include/th25_ctrl/version.hpp` + `src/version.cpp`(新規)、`src/th25_sim/CMakeLists.txt` + `include/th25_sim/sim_stub.hpp` + `src/sim_stub.cpp`(新規)、`tests/CMakeLists.txt` + `tests/unit/test_smoke.cpp`(新規)、`.github/workflows/cpp-build.yml`(新規)、CIL-TH25-001 v0.5 → v0.6、CRR-TH25-001 v0.3 → v0.4、README.md、DEVELOPMENT_STEPS.md v0.11 → v0.12、GitHub Issue #2(CR-0002) |
+| コミット | `ebc2f40`(着手前事後処理: CR-0001 CLOSED 遷移)、_(本 Step 本体コミット時に追記)_ |
+
+**採用根拠:**
+
+- **IEC 62304 §5.1.4 への対応:** クラス B/C で要求される「ソフトウェア開発標準・方法・ツールの計画」を Step 14 で物理的に成立させる。SDP §6.1 / §6.2 で計画されたツール群が、CMakeLists / `.clang-tidy` / CI ワークフロー等の構成定義ファイルとして実体化される
+- **IEC 62304 §5.3.3 / §5.3.4 への準備:** クラス B/C で要求される「SOUP の機能的・性能的要求事項の指定」「SOUP に必要なシステム上の HW/SW の指定」を SAD(Step 15)で記述するための前提として、Step 14 で SOUP を正式登録(13 件)。SAD では本 SOUP リストを直接参照
+- **vcpkg を選定した理由(Conan ではなく):**
+  - CMake 統合が `CMAKE_TOOLCHAIN_FILE` 1 行で完結、学習教材としての複雑性が低い
+  - `vcpkg.json` の `builtin-baseline` で 1 行による完全固定が可能(SCMP §3.2 のバージョン固定要求への直接対応)
+  - リリースタグが月次の安定リリースで明確(`2026.03.18` 等)、commit hash の追跡が容易
+  - GoogleTest を含む主要 C++ ライブラリの収録範囲が広く、Step 17+ の追加依存にも対応可能
+- **vcpkg ベースライン commit `c3867e714d...` を選定した理由:** WebFetch で確認した `microsoft/vcpkg` の最新リリース `2026.03.18`(2026-03-19 リリース、verified GPG 署名)。Step 14 着手時点で利用可能な最新の安定リリース commit
+- **ローカル `TH25_BUILD_TESTS` オプションを追加した理由:** vcpkg を持たない開発環境(Inc.1 着手前から本リポジトリを clone した第三者、レビュアー等)でも `cmake -DTH25_BUILD_TESTS=OFF` で骨格のビルドが成立するため。CI ではデフォルト `ON` で常時テスト実行
+- **CI で 8 ジョブのマトリクス(2 コンパイラ × 4 プリセット)とした理由:** SCMP §4.1 重大変更の追加検証要求(コンパイラ更新時 全試験再実行 + Sanitizer 全種再実行 + HZ-007 リスク評価)を、本プロジェクトでは「並行 CI で常時両コンパイラ・全 Sanitizer を回す」ことで物理的に達成する。Step 14 では smoke test 1 件のみだが、Step 17+ で UT を追加していけば自然に検証範囲が広がる
+- **`inc1-requirements-frozen` を維持(再凍結 `-v2` を発行しない)理由:** 本 CR は SRS の変更を伴わない(SRS-IF-001/002/003/004/005、SRS-D-009 等への影響なし、要求は不変)。プロジェクト骨格は SRS 配下の実装基盤であり、要求凍結は維持される
+- **SCMP §4.1.2 admin bypass 例外条件下での直接コミット運用:** Step 13 と同様、PR を経ず本体コミット → SHA 追記コミット → タグ付与の流儀を踏襲。Step 14 は本体コミットのみ(タグ付与なし)で、SHA 追記コミットも不要(CIL §10.x 詳細スナップショット節を新設しないため)
+- **タグ付与なしの理由:** SCMP §5.1 の規定タグセット(`planning-baseline` / `inc{N}-requirements-frozen` / `inc{N}-design-frozen` / `inc{N}-baseline` / `vX.Y.Z`)に「ビルド系初版」確定タグは含まれない。`inc1-design-frozen` は Step 16 SDD 完了時、`inc1-baseline` は Step 17+ 試験合格時に付与する。本 Step は要求凍結と設計凍結の中間の準備段階であり、タグ追加は SCMP 改訂を伴うためここでは見送る
+
+**Therac-25 学習目的の含意:**
+
+- **HZ-002(race condition)構造的予防の物理的成立:** TSan ランタイム(SOUP-015、HZ-002 直接対応)を CI で常時実行する基盤を Step 14 で確立。Step 17+ でのコード実装段階以降、race condition は CI が自動検出する状態となり、Tyler 第 1 例の race condition 類型は実装時点で機械的に予防される
+- **HZ-007(レガシーコード再利用前提喪失)構造的予防:** vcpkg `builtin-baseline` で SOUP のバージョンを完全固定。コンパイラ・標準ライブラリ更新は SCMP §4.1 重大区分 + SMP §7.2 で扱い、CCB 審議 + 全試験再実行 + HZ-007 リスク評価が必須化される。Therac-6/20 から Therac-25 への移行時の前提見直し漏れに相当する事象を、現代のコンテキスト(コンパイラ・標準ライブラリ更新)で防ぐ仕組みを Step 14 で確立
+- **MISRA C++ 2023 関連チェックの機械的検出開始:** `.clang-tidy` の `bugprone-*` / `cert-*` / `concurrency-*` / `cppcoreguidelines-*` / `hicpp-*` 群により、共有変数の非保護アクセス(RCM-002/004 違反)、整数オーバフロー(RCM-003 違反)、強い型の暗黙変換(RCM-008 違反)等を Step 17+ のコード追加時点で機械的に検出可能になる(SDP §6.1 / §14 共通ソフトウェア欠陥への直接対応)
+- **CR-0002 を MAJOR で起票・記録した意義:** 「ビルドシステム整備は形式的に MAJOR」という線引きは、SCMP §4.1 の判定基準に従うと厳密にはやや過剰(SOUP 追加自体は MAJOR、ただし「本来の本格運用前のインフラ整備」と捉えれば MODERATE 相当)。本プロジェクトでは **学習目的を最優先** し、CCB プロセスの本格運用第 2 例として正規の MAJOR フローを通すことで、姉妹プロジェクトおよび後続プロジェクトに「インフラ整備系の CR は手抜きせず MAJOR で扱う」運用例を残す
+
+---
+
 ## 次のステップ(予定)
 
 | Step | 内容 | 予定 |
 |------|------|------|
-| Step 14 | **SOUP 正式選定 + C++20 プロジェクト骨格整備**。vcpkg または Conan の選定確定、CMakeLists.txt(トップレベル)、`.clang-tidy` / `.clang-format` 整備、GoogleTest 導入、ASan/UBSan/TSan 有効化、CI への C++ ビルドワークフロー追加(`.github/workflows/cpp-build.yml`)、CIL §5 の SOUP を「予定」→ 正式登録に昇格 | 次回作業時 |
-| Step 15 | **SAD-TH25-001 v0.1 作成**。Inc.1 範囲のアーキテクチャ設計、SRS-RCM-018(UI 層分離 §5.3.5)/ RCM-019(メッセージパッシング)を構造的に確定、SOUP の機能要求(SRS への割付)、`inc1-design-frozen` タグ候補 | Step 14 完了後 |
-| Step 16 | **SDD-TH25-001 v0.1 作成**。各ソフトウェアユニットの詳細設計(クラス C 必須、IEC 62304 §5.4.2)、ユニット間 IF 詳細、`inc1-design-frozen` 確定 | Step 15 完了後 |
-| Step 17+ | コード実装(`src/th25_ctrl/` + `src/th25_sim/`)+ UT(GoogleTest)+ IT + ST + `inc1-baseline` タグ付与 | Inc.1 後半 |
+| Step 15 | **SAD-TH25-001 v0.1 作成**。Inc.1 範囲のアーキテクチャ設計、SRS-RCM-018(UI 層分離 §5.3.5)/ RCM-019(メッセージパッシング)を構造的に確定、SOUP の機能要求(SRS への割付、IEC 62304 §5.3.3 クラス B/C 要求)、SOUP のシステム上 HW/SW 要求(§5.3.4 クラス B/C 要求)、`inc1-design-frozen` タグ候補 | 次回作業時 |
+| Step 16 | **SDD-TH25-001 v0.1 作成**。各ソフトウェアユニットの詳細設計(クラス C 必須、IEC 62304 §5.4.2)、ユニット間 IF 詳細(§5.4.3)、詳細設計の検証(§5.4.4)、`inc1-design-frozen` 確定 | Step 15 完了後 |
+| Step 17+ | **コード実装**(`src/th25_ctrl/` + `src/th25_sim/`)+ UT(GoogleTest、§5.5 / §5.5.4 クラス C 追加受入基準)+ IT + ST(§5.7.4 クラス C 妥当性確認) + `inc1-baseline` タグ付与 | Inc.1 後半 |
 
 ## 改訂履歴
 
@@ -440,3 +473,4 @@ Phase 1〜2 の「計画先行」方針を採る根拠:
 | 0.9 | 2026-04-24 | Step 11(RMF-TH25-001 v0.1 作成)を追記 | k-abe |
 | 0.10 | 2026-04-25 | Step 12(Phase 3 完了確認 + `planning-baseline` タグ付与、ベースライン ID `BL-20260425-001`)を追記。CIL v0.4 / CRR v0.2 / `.markdownlint-cli2.yaml` MD058/MD060 明示無効化 / README 整合化を同時実施。「次のステップ(予定)」から Step 12 を削除し、Step 13(Inc.1 着手)以降を更新 | k-abe |
 | 0.11 | 2026-04-26 | Step 13(Phase 4 開始: Inc.1 SRS-TH25-001 v0.1 作成 + `inc1-requirements-frozen` タグ付与、ベースライン ID `BL-20260426-001`、CR-0001 GitHub Issue #1)を追記。CIL v0.5 / CRR v0.3 / README / SRS 整合化を同時実施。CCB-TH25-001 v0.1 の本格運用第 1 例として CR-0001 を MAJOR 区分で起票・処理(1 分インターバル充足)。誤起票事故(template リポジトリへ #25 で起票してしまった件)を採用根拠に教訓として記録。「次のステップ(予定)」から Step 13 を削除し、Step 14(SOUP 選定 + C++ 骨格)/ Step 15(SAD)/ Step 16(SDD)/ Step 17+(実装+試験)を更新 | k-abe |
+| 0.12 | 2026-04-26 | Step 14(Inc.1 C++20 プロジェクト骨格構築 + SOUP 正式選定 vcpkg、CR-0002 GitHub Issue #2)を追記。CIL v0.6 / CRR v0.4 / README / 新規ファイル群(`vcpkg.json` / `CMakeLists.txt` / `CMakePresets.json` / `.clang-tidy` / `.clang-format` / `src/th25_ctrl/` / `src/th25_sim/` / `tests/` / `.github/workflows/cpp-build.yml`)整合化。CCB 本格運用第 2 例として CR-0002 を MAJOR 区分で起票・処理。Step 13 完了報告で予告した CR-0001 の VERIFICATION → CLOSED 遷移を着手前事後処理コミット `ebc2f40` で実施。SOUP-001〜010/013〜015 を「予定」→ 正式登録(13 件)、ベースライン commit `c3867e714d...`(リリース 2026.03.18)で完全固定。「次のステップ(予定)」から Step 14 を削除し、Step 15(SAD)以降を更新 | k-abe |
