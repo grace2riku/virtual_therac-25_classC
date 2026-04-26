@@ -64,7 +64,11 @@ CheckOptions:
   readability-identifier-naming.MemberCase: lower_case
   readability-identifier-naming.PrivateMemberSuffix: _
   readability-identifier-naming.VariableCase: lower_case
-  readability-identifier-naming.GlobalConstantCase: UPPER_CASE
+  # Global constants follow Google C++ Style: 'k' prefix + CamelCase (e.g., kVersion).
+  # This is widely used in modern C++ codebases and matches our intent for
+  # constexpr inline string_view definitions.
+  readability-identifier-naming.GlobalConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantPrefix: 'k'
   readability-identifier-naming.MacroDefinitionCase: UPPER_CASE
   readability-function-cognitive-complexity.Threshold: 25
   cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true

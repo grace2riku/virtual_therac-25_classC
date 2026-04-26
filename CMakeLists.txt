@@ -15,6 +15,15 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# C++20 modules dependency scanning は本プロジェクトでは未使用 (Inc.1 の
+# プレースホルダはヘッダ + 実装の伝統的な構成).
+# CMake 4.x + Ninja は C++20 で modules スキャンファイル (*.modmap) を
+# デフォルト生成するが、これが compile_commands.json 経由で clang-tidy
+# に @-prefixed argument として渡され「no such file or directory」エラー
+# を引き起こす. 本プロジェクトは modules 不使用のため、scan を無効化して
+# clang-tidy との互換性を確保する.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
 # Generate compile_commands.json for clang-tidy / IDE integration.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
