@@ -1,12 +1,12 @@
 # ソフトウェア詳細設計書(SDD)
 
 **ドキュメント ID:** SDD-TH25-001
-**バージョン:** 0.1
-**作成日:** 2026-04-26
+**バージョン:** 0.1.1
+**作成日:** 2026-04-26(初版) / 2026-04-29(v0.1.1 軽微改訂)
 **対象製品:** 仮想 Therac-25(Virtual Therac-25) / TH25-SIM-001
 **対象ソフトウェアバージョン:** 0.2.0(Inc.1 完了で初回機能リリース予定)
 **安全クラス:** C(IEC 62304)
-**変更要求:** CR-0004(GitHub Issue #4)
+**変更要求:** CR-0004(GitHub Issue #4、初版)/ CR-0006(GitHub Issue #6、v0.1.1 軽微改訂)
 
 | 役割 | 氏名 | 所属 | 日付 | 署名 |
 |------|------|------|------|------|
@@ -82,7 +82,8 @@
 | [16] | CCB 運用規程(CCB-TH25-001) | 0.1 |
 | [17] | 変更要求台帳(CRR-TH25-001) | 0.5 |
 | [18] | N. G. Leveson, C. S. Turner. "An Investigation of the Therac-25 Accidents." IEEE Computer, 26(7):18-41, 1993. | — |
-| [19] | C. Bandela. *folly::ProducerConsumerQueue ドキュメント*(Facebook folly ライブラリの SPSC 実装、本 SDD では参照実装として引用) | GitHub HEAD |
+| [19] | L. Lamport. "Specifying Concurrent Program Modules." *ACM Trans. on Programming Languages and Systems*, 5(2):190-222, 1983(古典的 SPSC lock-free queue アルゴリズムの原典、本 SDD §4.13 で採用) | — |
+| [20] | C. Bandela. *folly::ProducerConsumerQueue ドキュメント*(Facebook folly ライブラリの SPSC 実装、参考。v0.1.1 で採用候補から外し、将来 MPSC 必要時の候補に位置づけ変更) | GitHub HEAD |
 
 ## 3. ソフトウェア項目のソフトウェアユニットへの改良(箇条 5.4.1)
 
@@ -144,7 +145,7 @@ ARCH-004 MessageBus
 | UNIT-302 | BendingMagnetSim | ARCH-003.2 | B(分離後) | **Inc.1** | 仮想ベンディング磁石応答模擬(SRS-IF-002) |
 | UNIT-303 | TurntableSim | ARCH-003.3 | B(分離後) | **Inc.1** | 仮想ターンテーブル(3 系統独立センサ)応答模擬 + 故障注入(SRS-IF-003) |
 | UNIT-304 | IonChamberSim | ARCH-003.4 | B(分離後) | **Inc.1** | 仮想イオンチェンバ(2 組)応答模擬 + サチュレーション/片系失陥模擬(SRS-IF-004) |
-| UNIT-401 | InProcessQueue | ARCH-004.1 | C | **Inc.1** | SPSC lock-free queue 抽象(`folly::ProducerConsumerQueue` 採用、SRS-RCM-019/SEP-003) |
+| UNIT-401 | InProcessQueue | ARCH-004.1 | C | **Inc.1** | SPSC lock-free queue 抽象(**v0.1.1 で独自実装に確定**、Lamport 1983 古典アルゴリズム、SRS-RCM-019/SEP-003) |
 | UNIT-402 | InterProcessChannel | ARCH-004.2 | C | **Inc.1** | gRPC over Unix Domain Socket ラッパ(SRS-IF-005/SEP-001/SEP-002) |
 
 ## 4. ソフトウェアユニットの詳細設計(箇条 5.4.2 ― クラス C)
@@ -556,7 +557,7 @@ void SafetyMonitor::run_monitor_thread() {
 
 ### 4.13 UNIT-401: InProcessQueue(MessageBus SPSC 実装)
 
-- **目的 / 責務:** プロセス内 SPSC lock-free queue 抽象。`folly::ProducerConsumerQueue` を採用し、薄いラッパで本プロジェクト固有 API を提供する。
+- **目的 / 責務:** プロセス内 SPSC lock-free queue 抽象。**v0.1.1(CR-0006)で独自実装(Lamport 1983 古典 SPSC ring buffer)に確定**。本プロジェクト固有の API(`try_publish` / `try_consume` / `approximate_size` / `empty_approx`)を提供する。
 - **関連 SRS:** SRS-RCM-019 / SRS-D-009
 - **関連 RCM:** RCM-002 / RCM-004 / RCM-019
 - **安全クラス:** C
@@ -569,11 +570,18 @@ void SafetyMonitor::run_monitor_thread() {
 | `template<typename Msg> std::optional<Msg> try_consume() noexcept` | なし | 取得成功時 `Msg`、失敗時 `nullopt` | consumer は単一スレッドのみ | 成功時 queue からデキュー | queue empty 時 `nullopt` 返却 |
 | `void publish_blocking(Msg&& msg)` | メッセージ | なし | 上記 + queue full 時に呼出側がブロック許容 | 成功保証 | タイムアウト時(5 秒)`InternalQueueFull` 例外 |
 
-#### 採用ライブラリと根拠
+#### 採用実装と根拠(v0.1.1 で確定)
 
-- **採用:** `folly::ProducerConsumerQueue<T>`(Facebook folly ライブラリ、Apache 2.0)
-- **根拠:** SPSC で十分な使用シーン(UNIT-201 → 各 Manager は 1:1)、`is_lock_free() == true`、メモリオーダリング検証済(folly 内部で TSan 対応済)、capacity 固定(起動時に 4096 メッセージで初期化、SDD §6.5 で構成定義)
-- **代替検討:** MPSC が必要な場面(複数 Sim から SafetyMonitor への通知等)では `boost::lockfree::queue<T>` を別途採用予定(Inc.2 で本格化、本 SDD §10 未確定事項として記載)
+- **採用(v0.1.1):** **独自 SPSC 実装**(`include/th25_ctrl/in_process_queue.hpp`、ヘッダオンリー、template クラス `InProcessQueue<T, Capacity>`、~120 行)
+- **アルゴリズム:** Lamport 1983 古典 SPSC ring buffer。`std::atomic<std::size_t>` head / tail インデックス + `std::array<T, Capacity>` 内部 buffer。release-acquire メモリオーダリングで producer / consumer 間の可視性を保証。1 スロット sentinel 設計で full / empty 区別
+- **Capacity 制約:** 2 の冪に compile-time 制約(`static_assert((Capacity & (Capacity - 1)) == 0)`)、wrap-around を bit-AND で高速化
+- **採用根拠(v0.1 の folly 採用方針からの変更理由):**
+  - **学習プロジェクトとしての透明性:** ~120 行のヘッダオンリー実装で Lamport SPSC の動作が読み手に明示される。folly は内部 1000+ 行、依存 boost / libdouble-conversion 等、教育用途には black-box 度が高い
+  - **依存最小化:** folly 全体を `vcpkg.json` に追加すると約 200 MB のビルド成果物(boost 含む)が必要。本プロジェクトは Inc.1 範囲では SPSC のみで充足するため、folly 採用は過剰
+  - **構造的要件は完全充足:** SDD §9 SEP-003(共有変数禁止 + lock-free queue メッセージパッシング)、`is_lock_free()` 表明(`static_assert(std::atomic<std::size_t>::is_always_lock_free)`)、release-acquire メモリオーダリング、TSan による race-free 検証、いずれも独自実装で完全に達成
+  - **SDD §10 で既に明示済:** v0.1 §10 で「folly 全体ではなく `folly::ProducerConsumerQueue` のみ部分依存(または独自実装の選択肢も検討)」と記載していた選択肢から、独自実装側を選択
+- **代替検討:** MPSC が必要な場面(複数 Sim から SafetyMonitor への通知等)では `boost::lockfree::queue<T>` または folly MPSC 実装を別途採用検討(Inc.2 で本格化、本 SDD §10 未確定事項として記載)。v0.1.1 では Inc.1 範囲は SPSC のみで充足
+- **HZ-007 構造的予防:** `static_assert(std::atomic<std::size_t>::is_always_lock_free)` をヘッダに埋込。コンパイラ・標準ライブラリ更新時に lock-free 性が失われた場合、ビルド時点で fail-stop
 
 #### 資源使用量・タイミング制約
 
@@ -863,8 +871,8 @@ private:
 
 ### 6.6 `MessageBus` SPSC/MPSC 選定
 
-- **Inc.1 範囲:** 全 IF が SPSC で十分(UNIT-201 → 各 Manager は 1:1)。`folly::ProducerConsumerQueue` を採用。
-- **Inc.2 で MPSC 検討:** UNIT-207 SafetyMonitor が複数の Sim プロセスから通知を受信する場面では MPSC が必要。`boost::lockfree::queue` または独自実装(本 SDD §10 未確定事項)。
+- **Inc.1 範囲(v0.1.1 で確定):** 全 IF が SPSC で十分(UNIT-201 → 各 Manager は 1:1)。**独自 SPSC 実装(Lamport 1983 古典 ring buffer)を採用**。本 SDD §4.13 参照
+- **Inc.2 で MPSC 検討:** UNIT-207 SafetyMonitor が複数の Sim プロセスから通知を受信する場面では MPSC が必要。`boost::lockfree::queue` / folly MPSC / 独自実装のいずれか(本 SDD §10 未確定事項)。
 
 ## 7. SOUP の使用箇所(UNIT レベル明示、HZ-007 影響評価支援)
 
@@ -875,16 +883,16 @@ private:
 | SOUP-001/002 | 全 UNIT | C++20 全機能(`enum class`、`std::atomic`、`std::variant`、`std::optional`、`std::thread`、`std::chrono`) | **高**(コンパイラ更新時は全 UNIT 再ビルド + 全試験再実行必須) |
 | SOUP-003/004 | 全 UNIT | C++ 標準ライブラリ全般 | **高**(同上) |
 | SOUP-005/006 | (ビルド時のみ) | CMake / Ninja | 中(ビルドシステム更新時は CI で確認) |
-| SOUP-007 | (ビルド時のみ) | vcpkg(GoogleTest 取得、folly 取得予定) | 中(`builtin-baseline` で固定済) |
+| SOUP-007 | (ビルド時のみ) | vcpkg(GoogleTest 取得。folly は v0.1.1 で採用候補から外したため Inc.1 では未取得、Inc.2 MPSC 検討時に再評価) | 中(`builtin-baseline` で固定済) |
 | SOUP-008/009 | tests/ 配下(全 UNIT の UT) | GoogleTest / GoogleMock | 低(試験フレームワークのため、機能検証が試験で担保) |
 | SOUP-010 | (静的解析時のみ、全 UNIT) | clang-tidy `bugprone-*` / `cert-*` / `concurrency-*` 等 | 中(ルール更新時は全 UNIT 再解析、警告に対応必要) |
 | SOUP-013 | 全 UNIT(`asan` プリセット) | AddressSanitizer ランタイム | 中 |
 | SOUP-014 | UNIT-204(`PulseCounter` の整数演算)、その他全 UNIT | UndefinedBehaviorSanitizer ランタイム | **高**(HZ-003 直接対応) |
 | **SOUP-015** | **UNIT-201/204/207/401(共有状態 + lock-free queue)、その他全 UNIT** | **ThreadSanitizer ランタイム** | **最高**(HZ-002 直接対応) |
-| (予定) folly::ProducerConsumerQueue | UNIT-401 | SPSC lock-free queue 実装 | **高**(更新時は MessageBus 動作の再検証必須、本 SDD §10 で正式 SOUP 登録予定) |
+| (v0.1.1 で採用候補から外し) folly::ProducerConsumerQueue | (Inc.2 MPSC 候補として保留) | SPSC は独自実装に確定、folly は将来 MPSC 必要時の候補 | (Inc.1 範囲では SOUP として登録不要、Inc.2 で再評価時に登録判断) |
 | (予定) gRPC + Protocol Buffers | UNIT-402 | IPC | 中(`vcpkg.json` で固定予定) |
 
-> **本 SDD §10 で SOUP 追加予定:** folly(UNIT-401)、gRPC + Protocol Buffers(UNIT-402)、TOML パーサ(構成定義読込)。Step 17+ コード実装時に CIL §5 へ追加昇格(SCMP §4.1 重大区分の別 CR で対応)。
+> **本 SDD §10 で SOUP 追加予定(v0.1.1 で更新):** ~~folly(UNIT-401、SPSC 用)~~ → 独自実装で確定済(Step 18 / CR-0006)。残るは gRPC + Protocol Buffers(UNIT-402)、TOML パーサ(構成定義読込)。Step 19+ コード実装時に CIL §5 へ追加昇格(SCMP §4.1 重大区分の別 CR で対応)。
 
 ## 8. 詳細設計の検証(箇条 5.4.4 ― クラス C)
 
@@ -905,7 +913,7 @@ SDD 作成中に **新規ハザードは識別されなかった**。RMF-TH25-00
 
 ただし、以下の点は Step 17+ コード実装時に再評価する:
 
-- **`folly::ProducerConsumerQueue` の境界値挙動:** queue 容量超過時の挙動(本 SDD §4.13 では `try_publish` が false 返却、`publish_blocking` は 5 秒タイムアウトで例外)が安全側に振れることを Inc.1 IT で確認
+- **独自 SPSC 実装の境界値挙動(v0.1.1 で確定):** queue 容量超過時は `try_publish` が false 返却(producer 呼出側で `IpcQueueOverflow` ErrorCode 生成または busy-wait リトライを選択可能)。`publish_blocking` は v0.1.1 では未実装(SDD §4.13 v0.1 記載のものを v0.1.1 で削除、Inc.1 範囲では `try_publish` のみで充足)が安全側に振れることを Inc.1 IT で確認
 - **gRPC over UDS のメッセージ欠落・破損挙動:** UNIT-402 のエラー処理(`IpcChannelClosed` / `IpcDeserializationFailure`)が fail-safe(ビームオフ + アラーム)に正しく接続されることを Inc.1 IT で確認
 - **`std::chrono::system_clock` の単調性:** AuditLogger でのタイムスタンプは `system_clock` を使用するが、システム時刻調整(NTP 同期等)で逆行する可能性あり。append-only 性は維持されるが、ログ順序保証は別途検討(Inc.4 で確定)
 
@@ -913,7 +921,8 @@ SDD 作成中に **新規ハザードは識別されなかった**。RMF-TH25-00
 
 | 項目 | 結果 | レビュー日 | 記録 ID |
 |------|------|----------|---------|
-| 本 SDD v0.1 全体(セルフレビュー) | 承認(全 §1〜§10 整合確認、§4 全 UNIT が SAD §4.3 ARCH-NNN.x に対応、§5 全 IF が SAD §5 IF-U/IF-E に対応、§9 トレーサビリティが SRS 全要求をカバー、§7 SOUP 使用箇所が CIL §5 13 件 + 追加予定 3 件と整合) | 2026-04-26 | 本書 v0.1 のコミット SHA(本ステップコミット時に追記) |
+| 本 SDD v0.1 全体(セルフレビュー) | 承認(全 §1〜§10 整合確認、§4 全 UNIT が SAD §4.3 ARCH-NNN.x に対応、§5 全 IF が SAD §5 IF-U/IF-E に対応、§9 トレーサビリティが SRS 全要求をカバー、§7 SOUP 使用箇所が CIL §5 13 件 + 追加予定 3 件と整合) | 2026-04-26 | 本書 v0.1 のコミット `addc14a` |
+| v0.1.1 軽微改訂(セルフレビュー、Step 18 / CR-0006) | 承認(§4.13 / §6.6 / §7 / §10 で folly 採用 → 独自 SPSC 実装(Lamport ring buffer)に確定。SDD 構造的要件 = SPSC + lock-free + `is_lock_free()` 表明 + メッセージパッシング = は不変、`inc1-design-frozen` 維持。実装手段の選択を SDD §10 未確定事項から確定へ) | 2026-04-29 | 本書 v0.1.1 のコミット SHA(Step 18 本体コミット時に追記) |
 
 ## 9. トレーサビリティマトリクス
 
@@ -994,9 +1003,9 @@ SDD 作成中に **新規ハザードは識別されなかった**。RMF-TH25-00
 
 | 未確定事項 | 確定先 | 暫定方針(本 SDD で記述) |
 |---------|------|------------------------|
-| MessageBus MPSC 実装(SafetyMonitor 周り) | Inc.2 SDD 改訂(SDD v0.2) | `boost::lockfree::queue` 候補。または folly MPSC 実装 |
-| Protocol Buffers ライブラリのバージョン | Step 17+(`vcpkg.json` 追加) | gRPC `1.60+`、protobuf `25.x`(vcpkg ベースライン commit と整合) |
-| folly ライブラリの `vcpkg.json` 追加 | Step 17+ | folly 全体ではなく `folly::ProducerConsumerQueue` のみ部分依存(または独自実装の選択肢も検討) |
+| MessageBus MPSC 実装(SafetyMonitor 周り) | Inc.2 SDD 改訂(SDD v0.2) | `boost::lockfree::queue` 候補 / folly MPSC 実装 / 独自 MPSC 実装 のいずれか |
+| Protocol Buffers ライブラリのバージョン | Step 19+(`vcpkg.json` 追加) | gRPC `1.60+`、protobuf `25.x`(vcpkg ベースライン commit と整合) |
+| ~~folly ライブラリの `vcpkg.json` 追加~~ | **v0.1.1(Step 18 / CR-0006)で確定: 独自 SPSC 実装を採用**。folly は Inc.2 MPSC 検討時に再評価。本項目は SDD v0.1.1 で クローズ | — |
 | TOML パーサライブラリ(構成定義読込) | Step 17+(`vcpkg.json` 追加) | `toml++`(C++17/20)候補、または `tomlplusplus` |
 | `EnergyMagnetMap` の校正値 | Step 17+ 校正試験 | 線形補間、SRS-005 と整合 |
 | `DoseRatePerPulse_cGy_per_pulse` | Step 17+ 校正試験 | UNIT-204 で構成定義として注入 |
@@ -1007,3 +1016,4 @@ SDD 作成中に **新規ハザードは識別されなかった**。RMF-TH25-00
 | バージョン | 日付 | 変更内容 | 変更者 |
 |----------|------|---------|--------|
 | 0.1 | 2026-04-26 | 初版作成(Step 16 / CR-0004、本プロジェクト Issue #4)。**Inc.1 範囲(ビーム生成・モード制御コア)** の詳細設計をユニットレベルで確定し、`inc1-design-frozen` タグ(BL-20260426-002)で凍結。**§3 ユニットへの分解(IEC 62304 §5.4.1):** ARCH-NNN.x を UNIT-NNN(計 22 ユニット: Inc.1 中核 14、Inc.2 空殻 1、Inc.4 空殻 7)まで分解。**§4 各ユニットの詳細設計(IEC 62304 §5.4.2 クラス C 必須):** 全 UNIT について公開 API・データ構造・アルゴリズム/状態遷移・資源使用量/タイミング制約・例外/異常系の扱いを記述。中核は UNIT-200 CommonTypes(強い型 8 種 + `enum class` 4 種 + `Result<T,E>`)、UNIT-201 SafetyCoreOrchestrator(8 状態の `LifecycleState` 状態機械)、UNIT-204 DoseManager(`std::atomic<uint64_t>` + `PulseCounter` で HZ-003 構造的排除)、UNIT-401 InProcessQueue(`folly::ProducerConsumerQueue` SPSC、SRS-RCM-019 構造的実体)、UNIT-402 InterProcessChannel(gRPC over UDS、RCM-018 実装層)。**§5 IF 詳細設計(IEC 62304 §5.4.3 クラス C 必須):** IF-U-001〜010 のメッセージ型 struct 詳細、IF-E-001〜003 の Protocol Buffers スキーマ(proto3、Operator UI / Hardware Simulator / AuditLogger)を確定。**§6 共通型・データ構造:** `LifecycleState` 状態機械遷移許可表、`enum class ErrorCode` 階層(8 系統 × 4〜6 件、上位 8 ビットで系統判定)、強い型実装方針、`Result<T,E>` 実装、構成定義(校正値・閾値の外部化、HZ-007 構造的予防)、MessageBus SPSC/MPSC 選定。**§7 SOUP 使用箇所の UNIT レベル明示:** 13 件の SOUP + 追加予定 3 件(folly / gRPC+protobuf / TOML)を UNIT に割付、HZ-007 影響度を明示。**§8 詳細設計の検証(IEC 62304 §5.4.4 クラス C 必須):** 7 項目チェックリストを全クリア。**§9 トレーサビリティ:** SRS 全要求 → ARCH → UNIT → UT(計画 ID)を双方向で構築、RCM ↔ UNIT ↔ 検証手段の対応表(SRMP §6.1 / §7.1 と整合)。**Therac-25 学習目的の中核:** Tyler 第 1 例 race condition は SAD §9 で構造的に不可能化済の上で、本 SDD では §4.13 UNIT-401 + §6.6 MessageBus 設計で「メッセージパッシングの境界値挙動」を明示的に設計し、Inc.3 RCM-002 の lock-free queue 動作試験 + TSan 全 Pass + モデル検査の 3 層検証(SRMP §6.1)の前提を確立。Yakima Class3 オーバフローは §4.5 UNIT-204 + §6.3 強い型 `PulseCounter` で構造的に発生不可能化(`uint64_t` + atomic + 5,800 万年連続照射相当の余裕)。本 SDD 完了をもって `inc1-design-frozen` タグを Step 16 本体コミットに付与し、Inc.1 設計を不可逆に凍結 | k-abe |
+| 0.1.1 | 2026-04-29 | **軽微改訂(Step 18 / CR-0006、本プロジェクト Issue #6)。** UNIT-401 InProcessQueue の実装手段を **「採用: `folly::ProducerConsumerQueue`」→「採用: 独自 SPSC 実装(Lamport 1983 古典 ring buffer)」に確定**。SDD §4.13 / §6.6 / §7 / §10 / 参照文書の関連箇所を整合化。**`inc1-design-frozen`(BL-20260426-002)は維持**: 構造的要件(SPSC + lock-free + `is_lock_free()` 表明 + メッセージパッシング)は不変、SDD §10 で「`folly::ProducerConsumerQueue` または独自実装」と明示されていた選択肢を「独自実装」に確定するのみ。採用根拠: (a) 学習プロジェクトとしての透明性(~120 行のヘッダオンリー、Lamport 古典が読み手に明示)、(b) 依存最小化(folly 全体は ~200 MB ビルド成果物・boost 含む、Inc.1 範囲では過剰)、(c) 構造的要件は完全充足(ヘッダ内 `static_assert(std::atomic<size_t>::is_always_lock_free)`、release-acquire メモリオーダリング、TSan による race-free 検証)。SDD §7 SOUP 表で folly 行を「Inc.1 範囲では SOUP 登録不要、Inc.2 MPSC 検討時に再評価」に降格。SDD §10 の「folly ライブラリの `vcpkg.json` 追加」項目を「v0.1.1 で確定: 独自 SPSC 採用」としてクローズ。改訂規模: 軽微(実装手段の選択確定のみ、構造的要件・受入基準・トレーサビリティは不変)| k-abe |

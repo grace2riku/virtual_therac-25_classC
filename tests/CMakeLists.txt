@@ -35,3 +35,20 @@ target_link_libraries(th25_common_types_tests
 )
 target_compile_options(th25_common_types_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_common_types_tests)
+
+# UNIT-401 InProcessQueue (SPSC lock-free) の本格 UT (Step 18 / CR-0006,
+# UTPR-TH25-001 v0.2 §7.2).
+# - 容量境界 / FIFO / wrap-around / メッセージ型独立性
+# - HZ-002 (race condition) 直接対応: 1 producer + 1 consumer で 100k メッセージ
+#   concurrent 試験 (tsan プリセットで race detection 0 を検証)
+add_executable(th25_in_process_queue_tests
+    unit/test_in_process_queue.cpp
+)
+target_link_libraries(th25_in_process_queue_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_in_process_queue_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_in_process_queue_tests)
