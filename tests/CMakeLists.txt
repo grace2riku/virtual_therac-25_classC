@@ -52,3 +52,21 @@ target_link_libraries(th25_in_process_queue_tests
 )
 target_compile_options(th25_in_process_queue_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_in_process_queue_tests)
+
+# UNIT-201 SafetyCoreOrchestrator (LifecycleState 状態機械) の本格 UT
+# (Step 19 / CR-0007, UTPR-TH25-001 v0.3 §7.2).
+# - 状態遷移許可表 (SDD §6.1) の網羅試験
+# - 不正遷移は Halted + shutdown_requested_ で構造的に拒否
+# - HZ-001 (mode/target mismatch): RCM-001 状態機械の構造的不可能化
+# - HZ-002 (race condition): SPSC イベント配送 concurrent 試験 (tsan)
+add_executable(th25_safety_core_orchestrator_tests
+    unit/test_safety_core_orchestrator.cpp
+)
+target_link_libraries(th25_safety_core_orchestrator_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_safety_core_orchestrator_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_safety_core_orchestrator_tests)
