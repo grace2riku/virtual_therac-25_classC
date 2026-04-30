@@ -431,16 +431,15 @@ TEST(DoseManager_Ownership, NoCopyNoMove) {
 }
 
 // ============================================================================
-// UT-204-27: HZ-007 lock-free 表明 (runtime 確認、build 時 static_assert 補完)
+// UT-204-27: HZ-007 lock-free 表明 (build 時 static_assert)
+// 注: メンバ関数 is_lock_free() (runtime) は GCC libstdc++ 14 で libatomic への
+// 動的リンクを要求するケースがあるため使用しない. is_always_lock_free (static
+// constexpr) で build 時検証する方が厳密 (lock-free 性が失われたら fail-stop).
 // ============================================================================
 TEST(DoseManager_HZ007, AtomicsAreLockFree) {
     static_assert(std::atomic<std::uint64_t>::is_always_lock_free);
     static_assert(std::atomic<bool>::is_always_lock_free);
-
-    std::atomic<std::uint64_t> a64{0};
-    std::atomic<bool> ab{false};
-    EXPECT_TRUE(a64.is_lock_free());
-    EXPECT_TRUE(ab.is_lock_free());
+    SUCCEED();
 }
 
 // ============================================================================
