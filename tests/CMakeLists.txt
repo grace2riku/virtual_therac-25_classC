@@ -70,3 +70,22 @@ target_link_libraries(th25_safety_core_orchestrator_tests
 )
 target_compile_options(th25_safety_core_orchestrator_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_safety_core_orchestrator_tests)
+
+# UNIT-202 TreatmentModeManager (HZ-001 直接対応の中核) の本格 UT
+# (Step 20 / CR-0008, UTPR-TH25-001 v0.4 §7.2).
+# - SDD §4.3 モード遷移許可表 (SRS-002) の網羅試験
+# - 強い型 Energy_MeV / Energy_MV による単位安全 (RCM-008)
+# - BeamState != Off / エネルギー範囲外 (SRS-004) の構造的拒否
+# - HZ-001 (mode/target mismatch): Therac-25 Tyler 事故型の発現経路を阻止
+# - HZ-002 (race condition): std::atomic<TreatmentMode> N writer + reader 並行
+add_executable(th25_treatment_mode_manager_tests
+    unit/test_treatment_mode_manager.cpp
+)
+target_link_libraries(th25_treatment_mode_manager_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_treatment_mode_manager_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_treatment_mode_manager_tests)

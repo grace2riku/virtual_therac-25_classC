@@ -5,6 +5,7 @@
 add_library(th25_ctrl STATIC
     src/version.cpp
     src/safety_core_orchestrator.cpp
+    src/treatment_mode_manager.cpp
 )
 
 target_include_directories(th25_ctrl PUBLIC
