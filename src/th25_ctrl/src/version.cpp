@@ -11,6 +11,7 @@
 #include "th25_ctrl/in_process_queue.hpp"  // SPSC ring buffer も同様に取り込み.
 #include "th25_ctrl/safety_core_orchestrator.hpp"  // UNIT-201 (Step 19) の static_assert を発火.
 #include "th25_ctrl/treatment_mode_manager.hpp"    // UNIT-202 (Step 20) の static_assert を発火.
+#include "th25_ctrl/beam_controller.hpp"           // UNIT-203 (Step 21) の static_assert を発火.
 
 namespace {
 // in_process_queue.hpp / common_types.hpp / safety_core_orchestrator.hpp /

@@ -89,3 +89,21 @@ target_link_libraries(th25_treatment_mode_manager_tests
 )
 target_compile_options(th25_treatment_mode_manager_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_treatment_mode_manager_tests)
+
+# UNIT-203 BeamController (RCM-017 中核 / ビームオン許可フラグ消費型) の本格 UT
+# (Step 21 / CR-0009, UTPR-TH25-001 v0.5 §7.2).
+# - SDD §4.4 ビームオン許可フラグの compare_exchange による 1 回限り消費
+# - BeamState 4 状態機械 (Off/Arming/On/Stopping)
+# - HZ-001/HZ-004 直接対応, RCM-017 中核
+# - HZ-002 (race condition): N thread による許可フラグ競合で唯一 1 件のみ成功 (tsan)
+add_executable(th25_beam_controller_tests
+    unit/test_beam_controller.cpp
+)
+target_link_libraries(th25_beam_controller_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_beam_controller_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_beam_controller_tests)
