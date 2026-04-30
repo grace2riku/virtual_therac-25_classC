@@ -107,3 +107,24 @@ target_link_libraries(th25_beam_controller_tests
 )
 target_compile_options(th25_beam_controller_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_beam_controller_tests)
+
+# UNIT-204 DoseManager (HZ-005 直接 + HZ-003 構造的排除の中核) の本格 UT
+# (Step 22 / CR-0010, UTPR-TH25-001 v0.6 §7.2).
+# - SDD §4.5 ドーズ目標管理 + 積算 + 目標到達検知
+# - PulseCounter (UNIT-200) を内包し std::atomic<uint64_t> 5,800 万年余裕で HZ-003 構造的排除
+# - target_pulses_ を std::atomic<uint64_t> で整数比較化 (浮動小数 precision 回避)
+# - target_reached_ / target_set_ を std::atomic<bool> でフラグ管理
+# - HZ-002 (race condition): producer-producer-reader / producer-setter 並行 (tsan)
+# - HZ-005 (dose calculation): SRS-008 範囲境界値 + lifecycle ガード + 単位変換
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert を 6 ユニット目に拡大
+add_executable(th25_dose_manager_tests
+    unit/test_dose_manager.cpp
+)
+target_link_libraries(th25_dose_manager_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_dose_manager_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_dose_manager_tests)

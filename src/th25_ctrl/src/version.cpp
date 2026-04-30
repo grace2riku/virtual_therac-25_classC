@@ -12,6 +12,7 @@
 #include "th25_ctrl/safety_core_orchestrator.hpp"  // UNIT-201 (Step 19) の static_assert を発火.
 #include "th25_ctrl/treatment_mode_manager.hpp"    // UNIT-202 (Step 20) の static_assert を発火.
 #include "th25_ctrl/beam_controller.hpp"           // UNIT-203 (Step 21) の static_assert を発火.
+#include "th25_ctrl/dose_manager.hpp"              // UNIT-204 (Step 22) の static_assert を発火.
 
 namespace {
 // in_process_queue.hpp / common_types.hpp / safety_core_orchestrator.hpp /
@@ -27,6 +28,8 @@ namespace {
     th25_ctrl::SafetyCoreOrchestrator::EventQueue::capacity();
 [[maybe_unused]] inline constexpr auto kElectronEnergyMinProbe =
     th25_ctrl::kElectronEnergyMinMeV;
+[[maybe_unused]] inline constexpr auto kDoseTargetMinProbe =
+    th25_ctrl::kDoseTargetMinCGy;
 }  // namespace
 
 namespace th25_ctrl {
