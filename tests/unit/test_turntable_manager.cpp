@@ -421,12 +421,16 @@ TEST(TurntableManager_Concurrency, MoveToAndRead) {
 
 // ============================================================================
 // UT-205-25: 防御的 ErrorCode 系統 (TurntableOutOfPosition は Turntable 系 0x04)
+// 注: common_types.hpp §6.2 Severity 判定規則で Turntable 系 (0x04) → High。
+// (Critical は Mode/Beam/Dose/Internal 系のみ)
 // ============================================================================
 TEST(TurntableManager_ErrorCodes, CategoryConsistency) {
     EXPECT_EQ(error_category(ErrorCode::TurntableOutOfPosition), 0x04U);
     EXPECT_EQ(error_category(ErrorCode::TurntableSensorDiscrepancy), 0x04U);
     EXPECT_EQ(error_category(ErrorCode::TurntableMoveTimeout), 0x04U);
-    EXPECT_EQ(severity_of(ErrorCode::TurntableOutOfPosition), Severity::Critical);
+    EXPECT_EQ(severity_of(ErrorCode::TurntableOutOfPosition), Severity::High);
+    EXPECT_EQ(severity_of(ErrorCode::TurntableSensorDiscrepancy), Severity::High);
+    EXPECT_EQ(severity_of(ErrorCode::TurntableMoveTimeout), Severity::High);
 }
 
 }  // namespace th25_ctrl
