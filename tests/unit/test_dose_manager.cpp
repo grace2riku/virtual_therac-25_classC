@@ -486,10 +486,14 @@ TEST(DoseManager_SetDoseTarget, DoseOverflowOnInvalidRate) {
 // ============================================================================
 // UT-204-30: 並行処理 — 複数 producer (on_dose_pulse) + reader (current_accumulated /
 // is_target_reached) を `tsan` プリセットで race-free 検証 (HZ-002 直接対応).
+//
+// rate=0.05 cGy/pulse + target=10000 cGy (SRS-008 上限受入) で target_pulses=200000.
+// producer 4 × 10000 = 40000 パルス積算は target_pulses 未満で reached=false 維持.
+// 並行 atomic 操作量は 40000 で UT-200-16 と同等の race condition 検出能力.
 // ============================================================================
 TEST(DoseManager_Concurrency, ProducerProducerReader) {
-    DoseManager dm{kRateOneCGy};
-    constexpr DoseUnit_cGy target{100000.0};  // 余裕で達成可能
+    DoseManager dm{kRateRealistic};  // 0.05 cGy/pulse
+    constexpr DoseUnit_cGy target{10000.0};  // SRS-008 上限受入、target_pulses = 200000
     ASSERT_TRUE(dm.set_dose_target(target, kReadyState).has_value());
 
     constexpr int kProducers = 4;
@@ -524,10 +528,11 @@ TEST(DoseManager_Concurrency, ProducerProducerReader) {
     reader_stop.store(true, std::memory_order_release);
     reader.join();
 
-    // 累積が 4 × 10000 = 40000 cGy になっているはず (rate=1.0 cGy/pulse).
-    EXPECT_DOUBLE_EQ(dm.current_accumulated().value(),
-                     static_cast<double>(kProducers * kPulsesPerProducer));
-    // 40000 < 100000 なので reached は false のまま.
+    // 累積パルス = 4 × 10000 = 40000 → ドーズ = 40000 × 0.05 = 2000.0 cGy.
+    EXPECT_DOUBLE_EQ(
+        dm.current_accumulated().value(),
+        static_cast<double>(kProducers * kPulsesPerProducer) * kRateRealistic.value());
+    // target_pulses = 10000 / 0.05 = 200000、累積=40000 < target_pulses → reached=false.
     EXPECT_FALSE(dm.is_target_reached());
     // reader が少なくとも 1 回は走ったこと (race-free に load できた証拠).
     EXPECT_GT(reader_iterations.load(), 0U);
