@@ -10,6 +10,7 @@ add_library(th25_ctrl STATIC
     src/dose_manager.cpp
     src/turntable_manager.cpp
     src/bending_magnet_manager.cpp
+    src/startup_self_check.cpp
 )
 
 target_include_directories(th25_ctrl PUBLIC

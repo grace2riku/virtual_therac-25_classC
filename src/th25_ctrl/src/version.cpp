@@ -15,6 +15,7 @@
 #include "th25_ctrl/dose_manager.hpp"              // UNIT-204 (Step 22) の static_assert を発火.
 #include "th25_ctrl/turntable_manager.hpp"         // UNIT-205 (Step 23) の static_assert を発火.
 #include "th25_ctrl/bending_magnet_manager.hpp"    // UNIT-206 (Step 24) の static_assert を発火.
+#include "th25_ctrl/startup_self_check.hpp"        // UNIT-208 (Step 25) の static_assert を発火.
 
 namespace {
 // in_process_queue.hpp / common_types.hpp / safety_core_orchestrator.hpp /
@@ -38,6 +39,8 @@ namespace {
     th25_ctrl::kMagnetCurrentMaxA;
 [[maybe_unused]] inline constexpr auto kMagnetMapElectronProbe =
     th25_ctrl::EnergyMagnetMap::compute_target_current_electron(th25_ctrl::Energy_MeV{1.0});
+[[maybe_unused]] inline constexpr auto kElectronGunZeroToleranceProbe =
+    th25_ctrl::kElectronGunZeroToleranceMA;
 }  // namespace
 
 namespace th25_ctrl {

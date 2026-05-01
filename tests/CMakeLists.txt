@@ -171,3 +171,26 @@ target_link_libraries(th25_bending_magnet_manager_tests
 )
 target_compile_options(th25_bending_magnet_manager_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_bending_magnet_manager_tests)
+
+# UNIT-208 StartupSelfCheck (RCM-013 中核 + HZ-009 部分対応 / 起動時 4 項目自己診断)
+# の本格 UT (Step 25 / CR-0013, UTPR-TH25-001 v0.9 §7.2).
+# - SDD §4.9 起動時 4 項目自己診断 (電子銃 0 mA / ターンテーブル Light 位置 / 磁石 0 A
+#   / ドーズカウンタ 0)
+# - Manager 群経由 (UNIT-204/205/206) でセンサ計測値取得、UNIT-301 ElectronGunSim 未実装
+#   のため inject_electron_gun_current で UT 駆動可能
+# - 4 項目それぞれ既存 ErrorCode 階層で分類 (ElectronGunCurrentOutOfRange /
+#   TurntableOutOfPosition / MagnetCurrentDeviation / InternalUnexpectedState)
+# - HZ-009 (起動時不定動作) 部分対応, RCM-013 中核
+# - HZ-002 (race condition): std::atomic<double> + UT-208-29 1 setter + 4 reader 並行 (tsan)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert を 9 ユニット目に拡大
+add_executable(th25_startup_self_check_tests
+    unit/test_startup_self_check.cpp
+)
+target_link_libraries(th25_startup_self_check_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_startup_self_check_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_startup_self_check_tests)
