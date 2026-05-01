@@ -8,6 +8,7 @@ add_library(th25_ctrl STATIC
     src/treatment_mode_manager.cpp
     src/beam_controller.cpp
     src/dose_manager.cpp
+    src/turntable_manager.cpp
 )
 
 target_include_directories(th25_ctrl PUBLIC

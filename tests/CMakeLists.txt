@@ -128,3 +128,24 @@ target_link_libraries(th25_dose_manager_tests
 )
 target_compile_options(th25_dose_manager_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_dose_manager_tests)
+
+# UNIT-205 TurntableManager (HZ-001 直接対応 + RCM-005 中核 / 3 系統センサ集約 med-of-3)
+# の本格 UT (Step 23 / CR-0011, UTPR-TH25-001 v0.7 §7.2).
+# - SDD §4.6 ターンテーブル位置指令 + 3 系統独立センサ集約 + 偏差判定
+# - std::atomic<double> 4 個 (sensor_0/1/2 + target) で並行アクセス保護
+# - has_discrepancy(threshold=1.0 mm) でセンサ単一故障・3 系統不一致を構造的検出
+# - is_in_position(±0.5 mm) で SRS-006 in-position 判定
+# - HZ-001 (Tyler 事故型「ターンテーブル位置不整合」) 直接対応
+# - HZ-002 (race condition): 1 writer + 4 reader 並行 (tsan)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert を 7 ユニット目に拡大
+add_executable(th25_turntable_manager_tests
+    unit/test_turntable_manager.cpp
+)
+target_link_libraries(th25_turntable_manager_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_turntable_manager_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_turntable_manager_tests)
