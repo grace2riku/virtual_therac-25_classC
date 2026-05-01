@@ -14,6 +14,7 @@
 #include "th25_ctrl/beam_controller.hpp"           // UNIT-203 (Step 21) の static_assert を発火.
 #include "th25_ctrl/dose_manager.hpp"              // UNIT-204 (Step 22) の static_assert を発火.
 #include "th25_ctrl/turntable_manager.hpp"         // UNIT-205 (Step 23) の static_assert を発火.
+#include "th25_ctrl/bending_magnet_manager.hpp"    // UNIT-206 (Step 24) の static_assert を発火.
 
 namespace {
 // in_process_queue.hpp / common_types.hpp / safety_core_orchestrator.hpp /
@@ -33,6 +34,10 @@ namespace {
     th25_ctrl::kDoseTargetMinCGy;
 [[maybe_unused]] inline constexpr auto kElectronPositionProbe =
     th25_ctrl::kElectronPositionMm;
+[[maybe_unused]] inline constexpr auto kMagnetCurrentMaxProbe =
+    th25_ctrl::kMagnetCurrentMaxA;
+[[maybe_unused]] inline constexpr auto kMagnetMapElectronProbe =
+    th25_ctrl::EnergyMagnetMap::compute_target_current_electron(th25_ctrl::Energy_MeV{1.0});
 }  // namespace
 
 namespace th25_ctrl {

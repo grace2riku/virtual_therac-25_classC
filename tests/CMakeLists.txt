@@ -149,3 +149,25 @@ target_link_libraries(th25_turntable_manager_tests
 )
 target_compile_options(th25_turntable_manager_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_turntable_manager_tests)
+
+# UNIT-206 BendingMagnetManager (HZ-005 部分対応 + RCM-008 中核 / 強い型による単位安全)
+# の本格 UT (Step 24 / CR-0012, UTPR-TH25-001 v0.8 §7.2).
+# - SDD §4.7 ベンディング磁石電流指令 (Energy_MeV / Energy_MV → MagnetCurrent_A)
+# - EnergyMagnetMap 線形補間 (slope, intercept) を constexpr で内部保持
+# - 偏差 ±5% 判定 (SRS-ALM-004) + SRS-D-006 範囲 (0.0〜500.0 A) の防御層
+# - std::atomic<double> 2 個 (target/actual) + std::atomic<bool> (target_set_) で並行アクセス保護
+# - HZ-005 (dose calculation): 強い型 Energy_MeV / Energy_MV / MagnetCurrent_A (RCM-008)
+# - HZ-001 (mode/target mismatch): mode + energy 不整合の構造的拒否
+# - HZ-002 (race condition): 1 setter + 4 reader 並行 (tsan)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert を 8 ユニット目に拡大
+add_executable(th25_bending_magnet_manager_tests
+    unit/test_bending_magnet_manager.cpp
+)
+target_link_libraries(th25_bending_magnet_manager_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_bending_magnet_manager_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_bending_magnet_manager_tests)
