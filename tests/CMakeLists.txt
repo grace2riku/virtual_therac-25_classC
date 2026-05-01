@@ -194,3 +194,24 @@ target_link_libraries(th25_startup_self_check_tests
 )
 target_compile_options(th25_startup_self_check_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_startup_self_check_tests)
+
+# UNIT-301 ElectronGunSim (Hardware Simulator 層の最初の具体実装) の本格 UT
+# (Step 26 / CR-0014, UTPR-TH25-001 v0.10 §7.2).
+# - SDD §4.12 仮想電子銃応答模擬 (set_current + read_actual_current)
+# - SRS-IF-001 / SRS-O-001 / SRS-I-008 / SRS-D-008 (0.0〜10.0 mA) 完全一致
+# - std::atomic<double> + std::atomic<bool> + std::atomic<std::uint32_t> の三重 atomic
+# - ノイズ模擬 ±1% (default OFF、enable_noise(seed) で有効化、UT 駆動安定化)
+# - 物理的飽和 (clamp_to_range) で範囲外指令を吸収
+# - HZ-002 (race condition): UT-301-19 で 1 setter + 4 reader × 5000 race-free (tsan)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert 三重表明を 10 ユニット目に拡大
+add_executable(th25_electron_gun_sim_tests
+    unit/test_electron_gun_sim.cpp
+)
+target_link_libraries(th25_electron_gun_sim_tests
+    PRIVATE
+        th25_sim
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_electron_gun_sim_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_electron_gun_sim_tests)

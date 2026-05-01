@@ -1,13 +1,19 @@
-# th25_sim: 仮想ハードウェアモデル(Inc.1 のプレースホルダ)
-# 電子銃・ベンディング磁石・ターンテーブル・イオンチェンバ等の C++ クラス群は
-# Step 17+ で SDD-TH25-001 v0.1 に基づき追加する。
+# th25_sim: 仮想ハードウェアモデル(Inc.1)
+# Step 14 でプレースホルダ (sim_stub.cpp) として骨格を確立。
+# Step 26 (CR-0014) で UNIT-301 ElectronGunSim を最初の具体実装として追加。
+# UNIT-302/303/304 (BendingMagnetSim / TurntableSim / IonChamberSim) は後続 Step で追加。
 
 add_library(th25_sim STATIC
     src/sim_stub.cpp
+    src/electron_gun_sim.cpp
 )
 
 target_include_directories(th25_sim PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
+
+# UNIT-301 は th25_ctrl/common_types.hpp の ElectronGunCurrent_mA 強い型を利用するため
+# th25_ctrl にリンク (PUBLIC: 利用側にも伝播)。
+target_link_libraries(th25_sim PUBLIC th25_ctrl)
 
 target_compile_options(th25_sim PRIVATE ${TH25_STRICT_WARNINGS})
