@@ -215,3 +215,24 @@ target_link_libraries(th25_electron_gun_sim_tests
 )
 target_compile_options(th25_electron_gun_sim_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_electron_gun_sim_tests)
+
+# UNIT-302 BendingMagnetSim (Hardware Simulator 層 2 ユニット目) の本格 UT
+# (Step 27 / CR-0015, UTPR-TH25-001 v0.11 §7.2).
+# - SDD §4.13 仮想ベンディング磁石応答模擬 (set_current + read_actual_current)
+# - SRS-IF-002 / SRS-O-002 / SRS-I-007 / SRS-D-006 (0.0〜500.0 A) 完全一致
+# - std::atomic<double> + std::atomic<bool> + std::atomic<std::uint32_t> の三重 atomic
+# - ノイズ模擬 ±2% (default OFF、enable_noise(seed) で有効化、UT 駆動安定化)
+# - 物理的飽和 (clamp_to_range) で範囲外指令を吸収
+# - HZ-002 (race condition): UT-302-19 で 1 setter + 4 reader × 5000 race-free (tsan)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert 三重表明を 11 ユニット目に拡大
+add_executable(th25_bending_magnet_sim_tests
+    unit/test_bending_magnet_sim.cpp
+)
+target_link_libraries(th25_bending_magnet_sim_tests
+    PRIVATE
+        th25_sim
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_bending_magnet_sim_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_bending_magnet_sim_tests)
