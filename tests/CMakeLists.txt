@@ -263,3 +263,30 @@ target_link_libraries(th25_turntable_sim_tests
 )
 target_compile_options(th25_turntable_sim_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_turntable_sim_tests)
+
+# UNIT-304 IonChamberSim (Hardware Simulator 層 4 ユニット目 / 本層最終 / 故障注入機能あり)
+# の本格 UT (Step 29 / CR-0017, UTPR-TH25-001 v0.13 §7.2).
+# - SDD §4.12 仮想イオンチェンバ応答模擬 (read_dose + inject_saturation + inject_channel_failure)
+# - SRS-IF-004 / SRS-I-006 / SRS-D-004 (0.0〜10000.0 cGy 計測値範囲) 完全一致
+# - std::atomic<double> × 2 + std::atomic<FaultMode> × 2 の二重 atomic 種
+#   (UNIT-303 四重から本ユニットに必要な atomic 種に絞り込み、シンプルさ優先)
+# - 2 系統独立チャネル (Channel0/Channel1) + 故障モード 3 種 (None/Saturation/ChannelFailure)
+# - 物理的飽和 (clamp_to_range) で範囲外指令を吸収 (SRS-I-006 0.0〜10000.0 cGy)
+# - HZ-005 (dose calculation): 故障注入 Saturation/ChannelFailure × 2 チャネル + 部分故障 +
+#   混在故障モードで UNIT-204 DoseManager + UNIT-207 SafetyMonitor 結線時の冗長性検証経路
+#   を IT/ST で機械検証可能化する試験ハーネス基盤
+# - HZ-002 (race condition): UT-304-23 incrementer + multi reader / UT-304-24
+#   fault injector + multi reader race-free × 5000 (tsan)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert 二重表明
+#   (double + FaultMode) を 13 ユニット目に拡大 (本層最終)
+add_executable(th25_ion_chamber_sim_tests
+    unit/test_ion_chamber_sim.cpp
+)
+target_link_libraries(th25_ion_chamber_sim_tests
+    PRIVATE
+        th25_sim
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_ion_chamber_sim_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_ion_chamber_sim_tests)
