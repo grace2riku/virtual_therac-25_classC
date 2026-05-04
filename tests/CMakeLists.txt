@@ -236,3 +236,30 @@ target_link_libraries(th25_bending_magnet_sim_tests
 )
 target_compile_options(th25_bending_magnet_sim_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_bending_magnet_sim_tests)
+
+# UNIT-303 TurntableSim (Hardware Simulator 層 3 ユニット目 / 故障注入機能あり) の本格 UT
+# (Step 28 / CR-0016, UTPR-TH25-001 v0.12 §7.2).
+# - SDD §4.12 仮想ターンテーブル応答模擬 (command_position + read_sensor + inject_fault)
+# - SRS-IF-003 / SRS-O-003 / SRS-I-005 / SRS-006 / SRS-D-007 (-100.0〜+100.0 mm) 完全一致
+# - std::atomic<double> + std::atomic<bool> + std::atomic<std::uint32_t> + std::atomic<FaultMode>
+#   の四重 atomic (UNIT-301/302 三重 + FaultMode atomic を追加)
+# - 3 系統独立センサ (Sensor0/1/2) + 故障モード 4 種 (None/StuckAt/Delay/NoResponse)
+# - センサノイズ ±0.1 mm 絶対値 (default OFF、enable_sensor_noise(seed) で有効化、
+#   UT 駆動安定化、UNIT-301/302 と同パターン)
+# - 物理的飽和 (clamp_to_range) で範囲外指令を吸収
+# - HZ-001 (Tyler 事故型「ターンテーブル位置不整合」): 故障注入 9 通りで UNIT-205
+#   med-of-3 + has_discrepancy 判定の試験ハーネス基盤
+# - HZ-002 (race condition): UT-303-23 commander + multi reader / UT-303-24
+#   fault injector + multi reader race-free × 5000 (tsan)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert 四重表明を 12 ユニット目に拡大
+add_executable(th25_turntable_sim_tests
+    unit/test_turntable_sim.cpp
+)
+target_link_libraries(th25_turntable_sim_tests
+    PRIVATE
+        th25_sim
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_turntable_sim_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_turntable_sim_tests)

@@ -2,12 +2,14 @@
 # Step 14 でプレースホルダ (sim_stub.cpp) として骨格を確立。
 # Step 26 (CR-0014) で UNIT-301 ElectronGunSim を最初の具体実装として追加。
 # Step 27 (CR-0015) で UNIT-302 BendingMagnetSim を 2 ユニット目として追加。
-# UNIT-303/304 (TurntableSim / IonChamberSim) は後続 Step で追加。
+# Step 28 (CR-0016) で UNIT-303 TurntableSim を 3 ユニット目 (故障注入機能あり) として追加。
+# UNIT-304 (IonChamberSim) は後続 Step で追加。
 
 add_library(th25_sim STATIC
     src/sim_stub.cpp
     src/electron_gun_sim.cpp
     src/bending_magnet_sim.cpp
+    src/turntable_sim.cpp
 )
 
 target_include_directories(th25_sim PUBLIC
