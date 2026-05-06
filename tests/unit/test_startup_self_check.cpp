@@ -477,15 +477,19 @@ TEST(StartupSelfCheck_Concurrency, SetterMultiReader) {
     });
 
     // 4 reader: perform_self_check + current_electron_gun_current を並行に呼ぶ.
+    // do-while パターンで最低 1 回は本体を実行 (setter の inject_electron_gun_current
+    // は単一 atomic store で極端に高速なため、setter loop が reader 起動前に完了し
+    // reader が一度も実行されないケースを構造的に予防、PRB-0005 修正、Step 30 / CR-0018
+    // の gcc-13/debug 環境で UT-208-29 が flaky になった件への対応).
     std::vector<std::thread> readers;
     readers.reserve(kReaders);
     for (int i = 0; i < kReaders; ++i) {
         readers.emplace_back([&]() {
-            while (!setter_stop.load(std::memory_order_acquire)) {
+            do {
                 (void)f.checker.perform_self_check();
                 (void)f.checker.current_electron_gun_current();
                 reader_iters.fetch_add(1, std::memory_order_relaxed);
-            }
+            } while (!setter_stop.load(std::memory_order_acquire));
         });
     }
 
