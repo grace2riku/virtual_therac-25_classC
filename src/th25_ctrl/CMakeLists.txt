@@ -11,6 +11,7 @@ add_library(th25_ctrl STATIC
     src/turntable_manager.cpp
     src/bending_magnet_manager.cpp
     src/startup_self_check.cpp
+    src/safety_monitor.cpp
 )
 
 target_include_directories(th25_ctrl PUBLIC

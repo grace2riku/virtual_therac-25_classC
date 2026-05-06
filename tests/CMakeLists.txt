@@ -264,6 +264,26 @@ target_link_libraries(th25_turntable_sim_tests
 target_compile_options(th25_turntable_sim_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_turntable_sim_tests)
 
+# UNIT-207 SafetyMonitor (Inc.2 で本格化、本 v0.1 では空殻) の本格 UT
+# (Step 30 / CR-0018, UTPR-TH25-001 v0.14 §7.2).
+# - SDD §4.8 独立並行タスクのインターロック監視 (空殻 IF 骨格)
+# - run_monitor_thread / stop / is_stop_requested / tick_count / reset_for_test
+# - std::atomic<bool> + std::atomic<std::uint64_t> の二重 atomic
+# - HZ-002 (race condition): UT-207-09 1 runner + 4 reader / UT-207-10 N stopper 並行 (tsan)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert 二重表明を 14 ユニット目
+#   (Inc.1 範囲全 14 ユニット完成) に拡大
+add_executable(th25_safety_monitor_tests
+    unit/test_safety_monitor.cpp
+)
+target_link_libraries(th25_safety_monitor_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_safety_monitor_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_safety_monitor_tests)
+
 # UNIT-304 IonChamberSim (Hardware Simulator 層 4 ユニット目 / 本層最終 / 故障注入機能あり)
 # の本格 UT (Step 29 / CR-0017, UTPR-TH25-001 v0.13 §7.2).
 # - SDD §4.12 仮想イオンチェンバ応答模擬 (read_dose + inject_saturation + inject_channel_failure)
