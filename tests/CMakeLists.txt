@@ -310,3 +310,27 @@ target_link_libraries(th25_ion_chamber_sim_tests
 )
 target_compile_options(th25_ion_chamber_sim_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_ion_chamber_sim_tests)
+
+# UNIT-209 AuditLogger (Inc.4 で本格化、本 v0.1 では空殻) の本格 UT
+# (Step 31 / CR-0019, UTPR-TH25-001 v0.15 §7.2).
+# - SDD §4.10 安全関連イベントの集約・永続化ユニット (空殻 IF 骨格)
+# - publish / run_io_thread / stop / is_stop_requested / pending_count /
+#   processed_count / reset_for_test
+# - std::atomic<bool> + std::atomic<std::uint64_t> + std::mutex (cerr 出力アトミック性)
+# - HZ-002 (race condition): UT-209-09 4 publishers race-free / UT-209-10
+#   1 io_runner + 2 publishers + 4 readers 並行 (tsan)
+# - HZ-006 (cryptic / bypass): publish() で全 UNIT 安全関連イベントを集約する
+#   事後監査経路の構造的位置づけを確立 (Inc.4 で永続化により事後追跡可能性を完成)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert 二重表明を
+#   15 ユニット目 (Inc.1 範囲全 14 ユニット + 空殻ユニット第 2 例) に拡大
+add_executable(th25_audit_logger_tests
+    unit/test_audit_logger.cpp
+)
+target_link_libraries(th25_audit_logger_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_audit_logger_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_audit_logger_tests)

@@ -12,6 +12,7 @@ add_library(th25_ctrl STATIC
     src/bending_magnet_manager.cpp
     src/startup_self_check.cpp
     src/safety_monitor.cpp
+    src/audit_logger.cpp
 )
 
 target_include_directories(th25_ctrl PUBLIC
