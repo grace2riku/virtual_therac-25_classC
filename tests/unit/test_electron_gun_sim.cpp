@@ -320,11 +320,13 @@ TEST(ElectronGunSim_Concurrency, SetterMultiReader) {
     readers.reserve(kReaders);
     for (int i = 0; i < kReaders; ++i) {
         readers.emplace_back([&]() {
-            while (!setter_stop.load(std::memory_order_acquire)) {
+            // do-while で最低 1 回 body 実行を構造的に保証
+            // (CR-0021 教訓水平展開、PRB-0005 / PRB-0006 同根本原因対策).
+            do {
                 (void)sim.read_actual_current();
                 (void)sim.current_commanded();
                 reader_iters.fetch_add(1, std::memory_order_relaxed);
-            }
+            } while (!setter_stop.load(std::memory_order_acquire));
         });
     }
 

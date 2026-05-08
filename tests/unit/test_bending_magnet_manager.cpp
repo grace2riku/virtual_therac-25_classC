@@ -454,13 +454,15 @@ TEST(BendingMagnetManager_Concurrency, SetterMultiReader) {
     readers.reserve(kReaders);
     for (int i = 0; i < kReaders; ++i) {
         readers.emplace_back([&]() {
-            while (!setter_stop.load(std::memory_order_acquire)) {
+            // do-while で最低 1 回 body 実行を構造的に保証
+            // (CR-0021 教訓水平展開、PRB-0005 / PRB-0006 同根本原因対策).
+            do {
                 (void)bmm.current_target();
                 (void)bmm.current_actual();
                 (void)bmm.is_within_tolerance();
                 (void)bmm.is_target_set();
                 reader_iters.fetch_add(1, std::memory_order_relaxed);
-            }
+            } while (!setter_stop.load(std::memory_order_acquire));
         });
     }
 
@@ -492,10 +494,12 @@ TEST(BendingMagnetManager_Concurrency, InjectAndCheck) {
     });
 
     std::thread checker([&]() {
-        while (!injector_stop.load(std::memory_order_acquire)) {
+        // do-while で最低 1 回 body 実行を構造的に保証
+        // (CR-0021 教訓水平展開、PRB-0005 / PRB-0006 同根本原因対策).
+        do {
             (void)bmm.is_within_tolerance();
             (void)bmm.current_actual();
-        }
+        } while (!injector_stop.load(std::memory_order_acquire));
     });
 
     injector.join();

@@ -503,12 +503,14 @@ TEST(DoseManager_Concurrency, ProducerProducerReader) {
     std::atomic<std::uint64_t> reader_iterations{0};
 
     // reader: current_accumulated と is_target_reached を並行に呼ぶ (race-free 検証).
+    // do-while で最低 1 回 body 実行を構造的に保証
+    // (CR-0021 教訓水平展開、PRB-0005 / PRB-0006 同根本原因対策).
     std::thread reader([&]() {
-        while (!reader_stop.load(std::memory_order_acquire)) {
+        do {
             (void)dm.current_accumulated();
             (void)dm.is_target_reached();
             reader_iterations.fetch_add(1, std::memory_order_relaxed);
-        }
+        } while (!reader_stop.load(std::memory_order_acquire));
     });
 
     // producers: 4 thread が並行に on_dose_pulse を呼ぶ.
@@ -557,13 +559,15 @@ TEST(DoseManager_Concurrency, ProducerSetterRace) {
     });
 
     // setter: 100 ms 周期で target を切替・reset を呼ぶ (atomic 切替の race-free 検証).
+    // do-while で最低 1 回 body 実行を構造的に保証
+    // (CR-0021 教訓水平展開、PRB-0005 / PRB-0006 同根本原因対策).
     std::thread setter([&]() {
         bool toggle = false;
-        while (!setter_stop.load(std::memory_order_acquire)) {
+        do {
             const DoseUnit_cGy t{toggle ? 500.0 : 1000.0};
             (void)dm.set_dose_target(t, kReadyState);
             toggle = !toggle;
-        }
+        } while (!setter_stop.load(std::memory_order_acquire));
     });
 
     producer.join();

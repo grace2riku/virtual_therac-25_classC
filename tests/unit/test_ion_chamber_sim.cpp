@@ -398,12 +398,14 @@ TEST(IonChamberSim_Concurrency, IncrementerMultiReader) {
     readers.reserve(kReaders);
     for (int i = 0; i < kReaders; ++i) {
         readers.emplace_back([&]() {
-            while (!incrementer_stop.load(std::memory_order_acquire)) {
+            // do-while で最低 1 回 body 実行を構造的に保証
+            // (CR-0021 教訓水平展開、PRB-0005 / PRB-0006 同根本原因対策).
+            do {
                 (void)sim.read_dose(ChannelId::Channel0);
                 (void)sim.read_dose(ChannelId::Channel1);
                 (void)sim.current_fault_mode(ChannelId::Channel0);
                 reader_iters.fetch_add(1, std::memory_order_relaxed);
-            }
+            } while (!incrementer_stop.load(std::memory_order_acquire));
         });
     }
 
@@ -454,11 +456,13 @@ TEST(IonChamberSim_Concurrency, FaultInjectorMultiReader) {
     readers.reserve(kReaders);
     for (int i = 0; i < kReaders; ++i) {
         readers.emplace_back([&]() {
-            while (!injector_stop.load(std::memory_order_acquire)) {
+            // do-while で最低 1 回 body 実行を構造的に保証
+            // (CR-0021 教訓水平展開、PRB-0005 / PRB-0006 同根本原因対策).
+            do {
                 (void)sim.read_dose(ChannelId::Channel0);
                 (void)sim.current_fault_mode(ChannelId::Channel0);
                 reader_iters.fetch_add(1, std::memory_order_relaxed);
-            }
+            } while (!injector_stop.load(std::memory_order_acquire));
         });
     }
 
