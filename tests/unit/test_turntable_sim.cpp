@@ -516,15 +516,18 @@ TEST(TurntableSim_Concurrency, FaultInjectorMultiReader) {
     });
 
     // 3 reader: Sensor0 を並行に読取.
+    // do-while で最低 1 回 body 実行を構造的に保証 (PRB-0006 / Step 30 PRB-0005
+    // 教訓継続反映). injector loop の 5000 反復が極端に高速で reader thread
+    // 起動前に完了するケースを構造的に予防 (clang-17/debug 環境固有 flaky 解消).
     std::vector<std::thread> readers;
     readers.reserve(kReaders);
     for (int i = 0; i < kReaders; ++i) {
         readers.emplace_back([&]() {
-            while (!injector_stop.load(std::memory_order_acquire)) {
+            do {
                 (void)sim.read_sensor(SensorId::Sensor0);
                 (void)sim.current_fault_mode(SensorId::Sensor0);
                 reader_iters.fetch_add(1, std::memory_order_relaxed);
-            }
+            } while (!injector_stop.load(std::memory_order_acquire));
         });
     }
 
