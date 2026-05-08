@@ -13,6 +13,7 @@ add_library(th25_ctrl STATIC
     src/startup_self_check.cpp
     src/safety_monitor.cpp
     src/audit_logger.cpp
+    src/core_authentication_gateway.cpp
 )
 
 target_include_directories(th25_ctrl PUBLIC

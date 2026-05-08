@@ -334,3 +334,29 @@ target_link_libraries(th25_audit_logger_tests
 )
 target_compile_options(th25_audit_logger_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_audit_logger_tests)
+
+# UNIT-210 CoreAuthenticationGateway (Inc.4 で本格化、本 v0.1 では空殻) の本格 UT
+# (Step 32 / CR-0020, UTPR-TH25-001 v0.16 §7.2).
+# - SDD §4.11 操作者認証ゲートウェイ (空殻 IF 骨格、verify() のみ同期 API)
+# - verify (常時 AuthRequired) / verify_count / reset_for_test
+# - std::atomic<std::uint64_t> 単一 atomic (空殻範囲、Inc.4 で MessageBus 経由
+#   非同期化時に std::atomic<bool> 等を追加予定)
+# - AuthenticationVerify / AuthenticationResult / OperatorId / Credential 構造体
+#   (IF-U-010 と整合、Inc.4 で MessageBus 経由非同期 dispatch 時に使用)
+# - HZ-002 (race condition): UT-210-11 で 4 threads × 500 verify race-free (tsan)
+# - HZ-006 (cryptic / bypass): verify() 常時拒否で「未認証時は治療パラメータ確定
+#   不可」インタフェース契約を IF 骨格段階で確立 (Inc.4 で実認証 + AuditLogger 転送)
+# - HZ-010 (操作者認証・権限管理不備): 空殻 IF 骨格として確立 (Inc.4 で本格化)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert 単一表明を
+#   16 ユニット目 (Inc.1 範囲全 14 ユニット + 空殻ユニット第 3 例) に拡大
+add_executable(th25_core_authentication_gateway_tests
+    unit/test_core_authentication_gateway.cpp
+)
+target_link_libraries(th25_core_authentication_gateway_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_core_authentication_gateway_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_core_authentication_gateway_tests)
