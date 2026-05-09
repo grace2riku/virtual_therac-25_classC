@@ -73,9 +73,9 @@ Therac-25 は 1982 年に AECL(Atomic Energy of Canada Limited)が開発した�
 | 7 リスク | ソフトウェア安全クラス決定記録(SSC) | [`7_.../software_safety_class_determination_record.md`](./7_software_risk_management_process/software_safety_class_determination_record.md) | 🟡 v0.1(クラス C 決定、Therac-25 事故事例に基づく根拠記録済み) |
 | 7 リスク | リスクマネジメントファイル(RMF, ISO 14971) | [`7_.../risk_management_file.md`](./7_software_risk_management_process/risk_management_file.md) | 🟡 v0.1(HZ-001〜HZ-010 + RCM-001〜RCM-019、Therac-25 実事故事象シーケンス 5 件、P 値を実証発現頻度ベースで初期推定、構造的 RCM-018/019 で race condition への構造的対応) |
 | 8 構成管理 | ソフトウェア構成管理計画書(SCMP) | [`8_.../software_configuration_management_plan.md`](./8_software_configuration_management_process/software_configuration_management_plan.md) | 🟡 v0.1(GitHub Flow + CR 区分 3 段階、C++ エコシステム対応 SOUP 識別、並行処理関連変更時の TSan 必須化、コンパイラ更新時の HZ-007 リスク評価を規定) |
-| 8 構成管理 | 構成アイテム一覧(CIL) | [`8_.../configuration_item_list.md`](./8_software_configuration_management_process/configuration_item_list.md) | 🟡 v0.30(Phase 4(Inc.1)Step 34 完了時点。`inc1-requirements-frozen` + `inc1-design-frozen` 確定済。SOUP 13 件正式登録、**CI-SRC-004 を「予定」→ Step 34 で UNIT-101 PrescriptionEditor 空殻実装段階に新規昇格**(本プロジェクト初の th25_ui 具体実装、空殻実装としては第 4 例、新ライブラリ `th25_ui` 新設)、CI-SRC-001 / CI-SRC-005 は変更なし、CI-DOC-UTPR v0.19、CI-DOC-CRR を v0.27 → v0.28(CR-0022 OPEN、本格運用第 22 例)、CI-DOC-DEVSTEPS を v0.36 → v0.37 に昇格) |
+| 8 構成管理 | 構成アイテム一覧(CIL) | [`8_.../configuration_item_list.md`](./8_software_configuration_management_process/configuration_item_list.md) | 🟡 v0.31(Phase 4(Inc.1)Step 34 完了 + SHA 追記事後処理時点。`inc1-requirements-frozen` + `inc1-design-frozen` 確定済。SOUP 13 件正式登録、**CI-SRC-004 を Step 34 で UNIT-101 PrescriptionEditor 空殻実装段階に新規昇格**(本プロジェクト初の th25_ui 具体実装、空殻実装としては第 4 例、新ライブラリ `th25_ui` 新設)、CI-SRC-001 / CI-SRC-005 は変更なし、CI-DOC-UTPR v0.19、CI-DOC-CRR を v0.28 → v0.29(CR-0022 CLOSED + 本体 `045c706` + CI run `25586875743` 全 9 ジョブ Pass)、CI-DOC-DEVSTEPS を v0.37 → v0.38 に昇格、**1 コミットのみで初回 CI 全 Pass 成立**(Step 33 と同様、空殻実装 + 新ライブラリ追加でも初版即 Pass)) |
 | 8 構成管理 | CCB 運用規程 | [`8_.../ccb_operating_rules.md`](./8_software_configuration_management_process/ccb_operating_rules.md) | 🟡 v0.1(1 分インターバル正式定義 §5.4、Therac-25 事故 5 主要因チェック組込、並行処理レビュア役割追加、TSan/Sanitizer 全種再実行を決定記録に必須化) |
-| 8 構成管理 | 変更要求台帳 | [`8_.../change_request_register.md`](./8_software_configuration_management_process/change_request_register.md) | 🟡 v0.28(Step 13〜34 で CR-0001〜0022 を §4 本体表に登録。**CR-0001〜0021 全 CLOSED + CR-0022 OPEN**(本体 SHA + CI run id は push 後追記)。22 件すべて MAJOR・安全関連。Therac-25 主要因類型: 累積 A:22 / B:3 / D:9 / **E:5**(UNIT-101 で「UI 層未実装時拒否」インタフェース契約を IF 骨格段階で確立、Inc.4 で本格化)/ **F:21**(UNIT-101 で `static_assert` 単一表明を **17 ユニット目に拡大、Inc.1 範囲全 14 ユニット + 空殻ユニット第 4 例**)。集計表に Step 13〜34 完了時行を追加) |
+| 8 構成管理 | 変更要求台帳 | [`8_.../change_request_register.md`](./8_software_configuration_management_process/change_request_register.md) | 🟡 v0.29(Step 13〜34 で CR-0001〜0022 を §4 本体表に登録 + Step 34 SHA 追記事後処理完了。**CR-0001〜0022 全 CLOSED**(CR-0022 は本体 `045c706` で全 9 ジョブ Pass、CI run `25586875743` + `25586875744`)。22 件すべて MAJOR・安全関連。Therac-25 主要因類型: 累積 A:22 / B:3 / D:9 / **E:5** / **F:21**。集計表に Step 13〜34 完了時行を追加) |
 | 9 問題解決 | ソフトウェア問題解決手順書(SPRP) | [`9_.../software_problem_resolution_procedure.md`](./9_software_problem_resolution_process/software_problem_resolution_procedure.md) | 🟡 v0.1(GitHub Issue ベースの PRB-NNNN 運用、根本原因 13 分類、Therac-25 事故 5 主要因チェックリストを Critical 案件で必須化、傾向分析に Therac-25 主要因類型別集計を組込) |
 
 ### 補助
@@ -105,7 +105,7 @@ Therac-25 は 1982 年に AECL(Atomic Energy of Canada Limited)が開発した�
 | CI | **GitHub Actions**(Documentation Checks + cpp-build) | 確定(Step 14、`.github/workflows/cpp-build.yml`) |
 | ドキュメント検証 | **markdownlint-cli2 / lychee** | 確定 |
 
-詳細は SDP §6.2 および 構成アイテム一覧(CIL-TH25-001 v0.30)§5/§6/§7 を参照。
+詳細は SDP §6.2 および 構成アイテム一覧(CIL-TH25-001 v0.31)§5/§6/§7 を参照。
 
 ## 開発プロセスの方針
 
