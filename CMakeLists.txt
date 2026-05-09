@@ -59,6 +59,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 # Sub-projects (Inc.1 placeholders; populated in Step 17+).
 add_subdirectory(src/th25_ctrl)
 add_subdirectory(src/th25_sim)
+add_subdirectory(src/th25_ui)
 
 # Tests (Step 17+ で UT を本格実装、本 Step 14 ではスモークテストのみ).
 # vcpkg toolchain 不在の開発環境ではテストツリーを無効化できる:

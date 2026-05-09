@@ -360,3 +360,29 @@ target_link_libraries(th25_core_authentication_gateway_tests
 )
 target_compile_options(th25_core_authentication_gateway_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_core_authentication_gateway_tests)
+
+# UNIT-101 PrescriptionEditor (Inc.4 で本格化、本 v0.1 では空殻) の本格 UT
+# (Step 34 / CR-0022, UTPR-TH25-001 v0.19 §7.2).
+# - SDD §3.2 治療計画入力 UI (空殻 IF 骨格、submit_prescription() 同期 API のみ)
+# - submit_prescription (常時 InternalUnexpectedState) / submit_count / reset_for_test
+# - std::atomic<std::uint64_t> 単一 atomic (空殻範囲、Inc.4 で IPC 経由非同期化時に
+#   std::atomic<bool> 等を追加予定)
+# - 新 namespace th25_ui (SAD §3 ARCH-001 Operator UI Process、Inc.4 でプロセス分離予定)
+# - 新ライブラリ th25_ui (src/th25_ui/) で th25_ctrl の型を PUBLIC リンク
+# - HZ-002 (race condition): UT-101-11 で 4 threads × 500 submit race-free (tsan)
+# - HZ-006 (cryptic / bypass): submit_prescription() 常時拒否で「UI 層未実装時は
+#   治療計画送信を受付不可」インタフェース契約を IF 骨格段階で確立
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert 単一表明を
+#   17 ユニット目 (Inc.1 範囲全 14 ユニット + 空殻ユニット第 4 例) に拡大
+add_executable(th25_prescription_editor_tests
+    unit/test_prescription_editor.cpp
+)
+target_link_libraries(th25_prescription_editor_tests
+    PRIVATE
+        th25_ui
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_prescription_editor_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_prescription_editor_tests)
