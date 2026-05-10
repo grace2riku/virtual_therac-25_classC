@@ -190,14 +190,16 @@ TEST(UIAuthenticationGateway_ErrorCategory, AuthRequiredBelongsToAuthCategory) {
 }
 
 // ============================================================================
-// UT-104-08: ErrorCode::AuthRequired は Severity::Critical
-//            (SDD §6.2 Severity 階層との整合確認、UNIT-210 と一対の整合)
+// UT-104-08: ErrorCode::AuthRequired は Severity::Medium
+//            (SDD §6.2 Severity 階層との整合確認: Auth 系 0x07 は Medium、
+//             Internal 系 0xFF Critical / Mode 0x01・Beam 0x02・Dose 0x03
+//             Critical とは異なる、UNIT-210 と一対の整合)
 // ============================================================================
-TEST(UIAuthenticationGateway_Severity, AuthRequiredIsCritical) {
+TEST(UIAuthenticationGateway_Severity, AuthRequiredIsMedium) {
     static_assert(
         th25_ctrl::severity_of(th25_ctrl::ErrorCode::AuthRequired) ==
-            th25_ctrl::Severity::Critical,
-        "AuthRequired must be Critical severity (fail-stop).");
+            th25_ctrl::Severity::Medium,
+        "AuthRequired must be Medium severity (Auth category 0x07).");
     SUCCEED();
 }
 

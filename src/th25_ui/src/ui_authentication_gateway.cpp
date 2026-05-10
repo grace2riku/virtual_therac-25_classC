@@ -42,7 +42,7 @@ auto UIAuthenticationGateway::request_authentication(
 
     // 本 v0.1 範囲は UI 層 + Core 連携が未実装のため、認証要求を常時拒否する.
     // ErrorCode::AuthRequired は SDD §6.1 ErrorCode 階層の Auth 系 (0x07)
-    // Critical (fail-stop) として定義されており、UNIT-210
+    // に属し SDD §6.2 で Severity::Medium にマップされている. UNIT-210
     // CoreAuthenticationGateway (Step 32 / CR-0020 で空殻実装済) が常時
     // AuthRequired を返す空殻と一対の整合を確立する意味で本 ErrorCode を採用
     // (Inc.4 で本格認証ロジック実装時には「未認証時 = AuthRequired を返す」
