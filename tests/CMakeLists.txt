@@ -441,3 +441,32 @@ target_link_libraries(th25_beam_command_console_tests
 )
 target_compile_options(th25_beam_command_console_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_beam_command_console_tests)
+
+# UNIT-104 UIAuthenticationGateway (Inc.4 で本格化、本 v0.1 では空殻) の本格 UT
+# (Step 37 / CR-0025, UTPR-TH25-001 v0.25 §7.2).
+# - SDD §3.2 操作者認証 UI (空殻 IF 骨格、request_authentication() 同期 API のみ)
+# - request_authentication (常時 AuthRequired) / attempt_count / reset_for_test
+# - std::atomic<std::uint64_t> 単一 atomic (空殻範囲、Inc.4 で IPC 経由非同期化時に
+#   std::atomic<bool> 等を追加予定)
+# - 既存 th25_ui ライブラリ (Step 34 で新設) の 4 cpp 目として組込
+# - 新規型定義なし (OperatorId / Credential は UNIT-210 core_authentication_gateway.hpp
+#   で定義済を再利用、UNIT-210 と一対の整合)
+# - HZ-002 (race condition): UT-104-11 で 4 threads × 500 request_authentication
+#   race-free (tsan)
+# - HZ-006 (cryptic / bypass): request_authentication() 常時拒否で「未認証時は
+#   治療パラメータ確定操作を行えない」インタフェース契約を IF 骨格段階で確立
+#   (UNIT-210 と一対の整合、HZ-010 構造的位置づけ + RCM-015 中核の UI 側ゲートウェイ)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert 単一表明を
+#   20 ユニット目 (Inc.1 範囲全 14 ユニット + 空殻ユニット第 7 例) に拡大
+add_executable(th25_ui_authentication_gateway_tests
+    unit/test_ui_authentication_gateway.cpp
+)
+target_link_libraries(th25_ui_authentication_gateway_tests
+    PRIVATE
+        th25_ui
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_ui_authentication_gateway_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_ui_authentication_gateway_tests)
