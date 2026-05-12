@@ -294,6 +294,37 @@ SCMP / SPRP / SMP および今後のすべてのドキュメントで `PRB-NNNN`
 
 これらは SCMP §4.1.1、SRMP §3.2、SPRP §5 で明文化する予定である。
 
+### UT 作成時の Severity マッピング自己セルフチェック(必須)
+
+本ルールは PRB-0007 / CR-0026(Step 37 / 39、2026-05-10〜2026-05-13)で確立した運用規則である。SPRP §3.1 PRB 起票プロセスの教訓水平展開運用ルール本格運用第 2 例として、CR-0021(do-while パターン化)に続く新たな予防ルール。
+
+**背景:** Step 37 で UNIT-104 の `UT-104-08` を実装する際、UNIT-103 AlarmDisplay(Internal 系 0xFF = `Severity::Critical`)のテンプレを流用したが、`ErrorCode::AuthRequired` は Auth 系(0x07)= `Severity::Medium` であり、`static_assert(severity_of(AuthRequired) == Severity::Critical)` で compile-time 失敗。CI gcc-13 全 4 ジョブが Build フェーズで exit code 1 となった(本体 `918df6c` → 修正 `37aa742` の 2 コミット構成で解決)。
+
+**運用ルール:**
+
+1. **`UT-XXX-08` 等の Severity 静的表明を実装する際は、必ず以下を順に確認する:**
+   - 該当 ErrorCode のカテゴリ(`0x01`〜`0xFF`)を `src/th25_ctrl/include/th25_ctrl/common_types.hpp` の定義で確認
+   - SDD §6.2 `severity_of()` マッピング表(下表)で期待 Severity を再確認
+   - UNIT-200 `tests/unit/test_common_types.cpp` 内の Severity 網羅試験で既に検証済みの値と一致することを確認
+2. **他ユニット UT テンプレ流用時は、以下を必ず変更する:**
+   - テスト名(例: `XxxIsCritical` → `XxxIsMedium`)
+   - 期待 Severity 値(`Severity::Critical` → `Severity::Medium` 等)
+   - コメント内の Severity 表記(「Critical (fail-stop)」→「Medium (Auth 系)」等)
+3. **テンプレ流用箇所には必ず `// テンプレ流用元: UT-XXX-08 (...). Severity を SDD §6.2 で再確認済` のコメントを追加する**
+
+**SDD §6.2 Severity マッピング表(参照用):**
+
+| カテゴリ | 範囲 | Severity |
+|---------|------|---------|
+| Mode (0x01), Beam (0x02), Dose (0x03), Internal (0xFF) | 0x01xx/0x02xx/0x03xx/0xFFxx | **Critical** |
+| Turntable (0x04), IPC (0x06) | 0x04xx/0x06xx | **High** |
+| Magnet (0x05), Auth (0x07) | 0x05xx/0x07xx | **Medium** |
+| その他 | — | Low |
+
+**ローカル検出不可の構造的理由:**
+
+`build-local`(`TH25_BUILD_TESTS=OFF`)では `tests/` ディレクトリがビルドされないため、Severity マッピング誤りは **CI でしか検出できない**。よって本ルールを CI 失敗の **事前予防** として位置づける。
+
 ## AI アシスタントへの指示
 
 本ディレクトリで作業する際は:
