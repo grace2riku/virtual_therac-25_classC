@@ -715,12 +715,17 @@ TEST(DoseManager_Observer, DetachObserverStopsNotify) {
 // ============================================================================
 TEST(DoseManager_Observer, ConcurrentAttachDetachIsRaceFree) {
     DoseManager dm{kRateOneCGy};
-    ASSERT_TRUE(dm.set_dose_target(DoseUnit_cGy{1.0e9}, kReadyState).has_value());
+    // target を SRS-008 範囲内の上限 10000.0 cGy (= 10000 pulses) に設定し、
+    // producer の 5000 pulse では到達しないようにする (PRB-0002 同根本原因の SRS-008
+    // 範囲外指定を構造的に予防、UT-204-30 と同パターン)。
+    // observer 通知 race-free は UT-204-33〜35 で別途機械検証済のため、本テストでは
+    // observer_ atomic 自体の race-free (attach/detach 並行) のみを TSan で検証する。
+    ASSERT_TRUE(dm.set_dose_target(DoseUnit_cGy{10000.0}, kReadyState).has_value());
 
     constexpr int kIterations = 5000;
     std::atomic<bool> stop{false};
 
-    // producer: 1 kHz 想定の連続 pulse (到達検知 + 必要なら observer notify).
+    // producer: 1 kHz 想定の連続 pulse (到達しないため observer notify は発火しない).
     std::thread producer([&]() {
         for (int i = 0; i < kIterations; ++i) {
             dm.on_dose_pulse(PulseCount{1});
