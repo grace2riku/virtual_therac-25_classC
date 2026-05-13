@@ -294,9 +294,18 @@ SCMP / SPRP / SMP および今後のすべてのドキュメントで `PRB-NNNN`
 
 これらは SCMP §4.1.1、SRMP §3.2、SPRP §5 で明文化する予定である。
 
-### UT 作成時の Severity マッピング自己セルフチェック(必須)
+### UT 作成時の二重セルフチェック (Severity マッピング + SRS 範囲内)(必須)
 
-本ルールは PRB-0007 / CR-0026(Step 37 / 39、2026-05-10〜2026-05-13)で確立した運用規則である。SPRP §3.1 PRB 起票プロセスの教訓水平展開運用ルール本格運用第 2 例として、CR-0021(do-while パターン化)に続く新たな予防ルール。
+本節は UT 作成時に必須となる **2 つのセルフチェック** を統合的に記述する。両者とも「ローカル骨格ビルド (`build-local`、`TH25_BUILD_TESTS=OFF`) では `tests/` ディレクトリがビルドされないため CI でしか検出できない」という構造的特性を共有し、CI 失敗の **事前予防** として位置づけられる。
+
+| セルフチェック項目 | 由来 PRB / CR | 確立 Step |
+|------------------|--------------|----------|
+| **A. Severity マッピング自己セルフチェック** | PRB-0007 / CR-0026 | Step 37 / 39(2026-05-10〜2026-05-13) |
+| **B. SRS 範囲内セルフチェック** | PRB-0002 / PRB-0008 / CR-0029 | Step 22 / 41 / 43(2026-05-01〜2026-05-13) |
+
+両ルールは SPRP §3.1 PRB 起票プロセスの教訓水平展開運用ルール本格運用例として、CR-0021(do-while パターン化、第 1 例)に続く第 2 例(CR-0026)・第 3 例(CR-0029)で確立された。
+
+#### A. Severity マッピング自己セルフチェック
 
 **背景:** Step 37 で UNIT-104 の `UT-104-08` を実装する際、UNIT-103 AlarmDisplay(Internal 系 0xFF = `Severity::Critical`)のテンプレを流用したが、`ErrorCode::AuthRequired` は Auth 系(0x07)= `Severity::Medium` であり、`static_assert(severity_of(AuthRequired) == Severity::Critical)` で compile-time 失敗。CI gcc-13 全 4 ジョブが Build フェーズで exit code 1 となった(本体 `918df6c` → 修正 `37aa742` の 2 コミット構成で解決)。
 
@@ -321,9 +330,38 @@ SCMP / SPRP / SMP および今後のすべてのドキュメントで `PRB-NNNN`
 | Magnet (0x05), Auth (0x07) | 0x05xx/0x07xx | **Medium** |
 | その他 | — | Low |
 
-**ローカル検出不可の構造的理由:**
+#### B. SRS 範囲内セルフチェック
 
-`build-local`(`TH25_BUILD_TESTS=OFF`)では `tests/` ディレクトリがビルドされないため、Severity マッピング誤りは **CI でしか検出できない**。よって本ルールを CI 失敗の **事前予防** として位置づける。
+**背景:** Step 41 で UT-204-37 (`ConcurrentAttachDetachIsRaceFree`) を実装する際、producer (5000 pulse) で target 到達しない設計とするため `set_dose_target(DoseUnit_cGy{1.0e9}, ...)` を指定したが、SRS-008 範囲 [0.01, 10000.0] cGy を約 10 万倍超過していたため、`set_dose_target` が `ErrorCode::DoseOutOfRange` を返却し runtime fail。CI clang-tidy 以外の全 8 ジョブが UT-204-37 で失敗(本体 `0fc22b7` → 修正 `17295c6` の 2 コミット構成で解決)。同根本原因は Step 22 の PRB-0002(UT-204-30 で同 SRS-008 範囲外指定)で既発であり、同一ファイル内に修正済 UT-204-30 が存在したにもかかわらずテンプレ参照が行われなかったことが直接原因。
+
+**運用ルール:**
+
+1. **`set_*_target()` / `set_*_value()` 等の入力値を hard-coded する際は、必ず以下を順に確認する:**
+   - 対応する SRS の範囲制約(SRS-008 等)を SRS 本体で再確認
+   - SDD の対応する強い型定義(`DoseUnit_cGy` / `Energy_MeV` / `Position_mm` / `MagnetCurrent_A` 等)と SRS-D-XXX 行の範囲を併せて確認
+   - 範囲内指定であること、**または**範囲外として意図的に拒否確認するケース(境界値網羅試験等)であることを機械的にセルフチェック
+2. **並行 UT(producer + 多重 reader/attacher 等)を新規追加する際は、必ず以下を満たす:**
+   - **同一ファイル内の既存 PRB 修正済 UT のパターン**(本件では UT-204-30)を必ず参照し、同型の根本原因再発を構造的に予防
+   - 「target 到達させたい」/「target 到達させたくない」の **意図を UT コメントで明示**し、target 値選択の根拠(producer pulse 数 × rate との関係)を併記
+3. **意図的範囲外指定(物理的飽和 clamp 試験 / 境界値網羅 / 拒否確認)の場合は、コメントで明示する:**
+   - 例: `// SRS-D-008 範囲外 (15.0 mA、上限 10.0 mA 超) → clamp 動作確認`
+   - 例: `// SRS-008 境界外 (10001.0 cGy) → DoseOutOfRange 拒否確認`
+   - お手本: UT-301-19(`test_electron_gun_sim.cpp`、コメントで「SRS-D-008 範囲内」明示)/ UT-302-19(`test_bending_magnet_sim.cpp`、コメントで「SRS-D-006 範囲内」明示)
+
+**主要な SRS 範囲制約一覧(参照用):**
+
+| 強い型 | 範囲 | 出典 |
+|-------|------|------|
+| `DoseUnit_cGy` | 0.01〜10000.0 cGy(0.01 cGy ステップ) | SRS-008 / SRS-I-003 / SRS-D-004 |
+| `Energy_MeV`(Electron) | 1.0〜25.0 MeV | SRS-005 等 / `common_types.hpp` |
+| `Energy_MV`(XRay) | 5.0〜25.0 MV | SRS-005 等 / `common_types.hpp` |
+| `Position_mm`(Turntable) | -100.0〜+100.0 mm | SRS-D-007 / `common_types.hpp` |
+| `MagnetCurrent_A` | 0.0〜500.0 A | SRS-D-006 / `common_types.hpp` |
+| `ElectronGunCurrent_mA` | 0.0〜10.0 mA | SRS-D-008 / `common_types.hpp` |
+
+#### ローカル検出不可の構造的理由(A / B 共通)
+
+`build-local`(`TH25_BUILD_TESTS=OFF`)では `tests/` ディレクトリがビルドされないため、Severity マッピング誤り(A)も SRS 範囲外 hard-coded 値による runtime 失敗(B)も **CI でしか検出できない**。よって本節 A / B 両ルールを CI 失敗の **事前予防** として位置づける。
 
 ## AI アシスタントへの指示
 
