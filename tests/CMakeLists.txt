@@ -470,3 +470,33 @@ target_link_libraries(th25_ui_authentication_gateway_tests
 )
 target_compile_options(th25_ui_authentication_gateway_tests PRIVATE ${TH25_STRICT_WARNINGS})
 gtest_discover_tests(th25_ui_authentication_gateway_tests)
+
+# UNIT-402 InterProcessChannel (Inc.4 で本格化、本 v0.1 では空殻) の本格 UT
+# (Step 40 / CR-0027, UTPR-TH25-001 v0.28 §7.2).
+# - SDD §4.14 プロセス間通信ラッパ (空殻 IF 骨格、connect/send/recv/close)
+# - connect/send/recv (常時 IpcChannelClosed) / close (noexcept) /
+#   operation_count / reset_for_test
+# - std::atomic<std::uint64_t> 単一 atomic (空殻範囲、Inc.4 で gRPC SOUP 追加時に
+#   接続状態 / pending queue 等を追加予定)
+# - 既存 th25_ctrl ライブラリの 12 cpp 目として組込
+# - HZ-002 (race condition): UT-402-11 で 4 threads × 500 (connect/send/recv 各)
+#   race-free (tsan)
+# - HZ-006 (cryptic / bypass): connect/send/recv 常時拒否で「IPC 未確立時は
+#   メッセージ送受信できない」インタフェース契約を IF 骨格段階で確立
+#   (SEP-001 構造的実体、UI 層と安全コア間のメッセージパッシング前提を Inc.1 で確立)
+# - HZ-007 (legacy preconditions): is_always_lock_free static_assert 単一表明を
+#   21 ユニット目 (Inc.1 範囲全 14 ユニット + 空殻ユニット第 8 例) に拡大
+# - Severity マッピング自己セルフチェック (CLAUDE.md / CR-0026, Step 39 新運用ルール)
+#   初適用例: IpcChannelClosed (0x0601) → IPC 系 (0x06) → Severity::High
+#   (Internal/Mode/Beam/Dose 系の Critical / Auth/Magnet 系の Medium とは異なる)
+add_executable(th25_inter_process_channel_tests
+    unit/test_inter_process_channel.cpp
+)
+target_link_libraries(th25_inter_process_channel_tests
+    PRIVATE
+        th25_ctrl
+        GTest::gtest
+        GTest::gtest_main
+)
+target_compile_options(th25_inter_process_channel_tests PRIVATE ${TH25_STRICT_WARNINGS})
+gtest_discover_tests(th25_inter_process_channel_tests)

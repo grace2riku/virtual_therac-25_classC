@@ -14,6 +14,7 @@ add_library(th25_ctrl STATIC
     src/safety_monitor.cpp
     src/audit_logger.cpp
     src/core_authentication_gateway.cpp
+    src/inter_process_channel.cpp
 )
 
 target_include_directories(th25_ctrl PUBLIC
