@@ -93,11 +93,26 @@ auto DoseManager::on_dose_pulse(PulseCount pulse_delta) noexcept -> void {
     }
 
     const std::uint64_t target = target_pulses_.load(std::memory_order_acquire);
-    if (after >= target) {
-        // SDD §4.5 「目標到達時 IF-U-002 経由で BeamOff 要求送信」.
-        // Step 22 範囲では target_reached_ フラグまで実装. UNIT-201/203 への結線は
-        // Step 23+ で SafetyCoreOrchestrator dispatch 機構整備時に完成.
-        target_reached_.store(true, std::memory_order_release);
+    if (after < target) {
+        return;
+    }
+
+    // SDD §4.5 「目標到達時 IF-U-002 経由で BeamOff 要求送信」.
+    // Step 41 / CR-0028: target_reached_ の false → true エッジ遷移を compare_exchange_strong で
+    // atomic 化し、初回到達時のみ observer に notify する (重複通知防止).
+    // observer 未登録 (nullptr) 時はフラグ立てのみで notify をスキップ (従来挙動の維持).
+    bool expected = false;
+    const bool first_transition = target_reached_.compare_exchange_strong(
+        expected, true, std::memory_order_acq_rel, std::memory_order_acquire);
+    if (!first_transition) {
+        return;  // 既に到達済 → notify スキップ.
+    }
+
+    SafetyEventObserver* const observer = observer_.load(std::memory_order_acquire);
+    if (observer != nullptr) {
+        // 同期呼出. observer 実装側は < 10 ms 以内に処理完了することが要求される
+        // (SDD §4.5 「目標到達 → BeamOff < 1 ms 連鎖」、safety_event_observer.hpp 呼出契約).
+        observer->on_safety_event(SafetyEvent::DoseTargetReached);
     }
 }
 
@@ -135,6 +150,18 @@ auto DoseManager::reset() noexcept -> void {
 
 auto DoseManager::target_pulses_for_test() const noexcept -> std::uint64_t {
     return target_pulses_.load(std::memory_order_acquire);
+}
+
+// ----- Observer 結線 API (Step 41 / CR-0028 で追加, dispatch 機構の最小基盤) -----
+
+auto DoseManager::attach_observer(SafetyEventObserver* observer) noexcept -> void {
+    // 単純 store (release): on_dose_pulse 側は acquire load で観測する.
+    // observer == nullptr の場合は detach と等価 (nullptr を許容).
+    observer_.store(observer, std::memory_order_release);
+}
+
+auto DoseManager::detach_observer() noexcept -> void {
+    observer_.store(nullptr, std::memory_order_release);
 }
 
 }  // namespace th25_ctrl

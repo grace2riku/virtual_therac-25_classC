@@ -9,14 +9,18 @@
 //
 // SDD §4.5 公開 API (3 種):
 //   - set_dose_target(DoseUnit_cGy, LifecycleState) : ドーズ目標設定
-//   - on_dose_pulse(PulseCount)                     : 1 パルス分のドーズ積算 + 到達検知
+//   - on_dose_pulse(PulseCount)                     : 1 パルス分のドーズ積算 + 到達検知 + observer notify
 //   - current_accumulated()                         : 累積ドーズ取得
+//
+// Observer 結線 API (Step 41 / CR-0028 で追加, dispatch 機構の最小基盤):
+//   - attach_observer(SafetyEventObserver*)         : 観測者を登録 (atomic store)
+//   - detach_observer()                             : 観測者を解除 (atomic store nullptr)
 //
 // 補助 API (UT / observer 用):
 //   - current_target()                              : 設定済目標ドーズ取得
 //   - is_target_reached()                           : 到達フラグ取得 (UNIT-201 / UNIT-203 が後続 Step で観測)
 //   - pulse_count_to_dose(PulseCount)               : 単位変換 (rate_ 経由)
-//   - reset()                                       : 累積カウンタ + 到達フラグをクリア
+//   - reset()                                       : 累積カウンタ + 到達フラグ + observer ポインタを未登録状態にクリア
 //   - is_dose_target_in_range(DoseUnit_cGy)         : 静的純粋関数 (UT 用、SRS-008 範囲)
 //
 // SDD §4.5 設計判断 (Step 22 範囲):
@@ -29,11 +33,19 @@
 //     MessageBus 経由 BeamOff publish は dispatch 機構整備時に完成、Step 22
 //     範囲では「目標到達フラグ」までを実装する漸進策)
 //
-// Step 22 範囲制約:
+// Step 22 範囲制約 (Step 41 / CR-0028 で部分解消):
 //   SDD §4.5「IF-U-002 経由で BeamOff 要求送信」の MessageBus 結線は、UNIT-401
 //   InProcessQueue は実装済みだが BeamOffRequest メッセージ型と SafetyCoreOrchestrator
 //   からの dispatch 機構が未確定のため、Step 22 ではフラグ立てまで. UNIT-203
-//   BeamController との結線は Step 23+ で実施.
+//   BeamController との結線は Step 42+ で実施.
+//
+// Step 41 / CR-0028 で追加された範囲:
+//   - SafetyEventObserver (純粋仮想 interface) を attach する API を追加.
+//   - on_dose_pulse 内で is_target_reached の false → true エッジ検出時 (compare_exchange_strong
+//     による atomic edge-detection) のみ observer->on_safety_event(SafetyEvent::DoseTargetReached)
+//     を呼び出す. observer 未登録 (nullptr) 時は従来通りフラグ立てのみ.
+//   - UNIT-201 SafetyCoreOrchestrator を SafetyEventObserver として attach し、
+//     UNIT-203 への request_beam_off() を dispatch する結線は Step 42+ で実施.
 //
 // Therac-25 hazard mapping:
 //   - HZ-002 (race condition): 全 atomic 共有変数 + UT TSan 並行試験で機械検証.
@@ -47,6 +59,7 @@
 #pragma once
 
 #include "th25_ctrl/common_types.hpp"
+#include "th25_ctrl/safety_event_observer.hpp"
 
 #include <atomic>
 #include <cstdint>
@@ -110,15 +123,19 @@ public:
                                        LifecycleState lifecycle_state) noexcept
         -> Result<void, ErrorCode>;
 
-    // 1 パルス分のドーズ積算 + 目標到達検知.
+    // 1 パルス分のドーズ積算 + 目標到達検知 + observer 通知 (Step 41 / CR-0028 で拡張).
     // 事前条件: なし (IonChamberSim から 1 kHz で呼出される、SDD §4.5).
     // 事後条件:
     //   - accumulated_pulses_.fetch_add(pulse_delta, acq_rel)
-    //   - 目標到達時 (累積 ≥ target_pulses_ 且つ target_set_) は target_reached_ = true.
-    //   - target_set_ = false の状態では到達検知を実施しない (未設定保護).
-    // 注: SDD §4.5 サンプルでは MessageBus 経由 BeamOff publish するが、Step 22 では
-    // 到達フラグまで実装. UNIT-203 BeamController への結線は Step 23+ (SafetyCore
-    // Orchestrator dispatch 機構整備時) で実施.
+    //   - 目標到達時 (累積 ≥ target_pulses_ 且つ target_set_) は compare_exchange_strong により
+    //     target_reached_ を false → true に遷移させ、**初回到達時のみ** observer->on_safety_event
+    //     (SafetyEvent::DoseTargetReached) を呼び出す. 重複通知は atomic edge-detection で防止.
+    //   - observer 未登録 (nullptr) 時はフラグ立てのみで notify をスキップ (従来挙動).
+    //   - target_set_ = false の状態では到達検知 + observer 通知を実施しない (未設定保護).
+    // 注: SDD §4.5 サンプルでは MessageBus 経由 BeamOff publish するが、Step 41 では
+    // observer interface 経由の同期通知まで実装. UNIT-203 BeamController への結線
+    // (UNIT-201 SafetyCoreOrchestrator を SafetyEventObserver として attach し、
+    // UNIT-203 request_beam_off() を呼ぶ dispatch) は Step 42+ で実施.
     auto on_dose_pulse(PulseCount pulse_delta) noexcept -> void;
 
     // 現在の累積ドーズ取得 (read-only). atomic acquire load + 単位変換.
@@ -138,7 +155,23 @@ public:
 
     // 累積カウンタ + 到達フラグ + target_set_ を初期状態にクリア.
     // 治療セッション開始前 / 緊急停止後の再初期化用.
+    // Step 41 / CR-0028 で追加: observer ポインタは reset() で解除しない
+    // (registration の所有権は attach 側にあり、reset は内部状態のリセットのみを扱う).
     auto reset() noexcept -> void;
+
+    // ----- Observer 結線 API (Step 41 / CR-0028 で追加, dispatch 機構の最小基盤) -----
+
+    // 観測者を登録する. 同一 DoseManager に対し常に最後の attach のみが有効
+    // (現時点では 1 Producer × 1 Observer の最小構成、複数 Observer は Step 42+ で検討).
+    //   - observer == nullptr の場合は detach_observer() と等価.
+    //   - 並行に on_dose_pulse が走っていても race-free
+    //     (observer_ は std::atomic で release-acquire ordering で保護).
+    //   - attach 側が SafetyEventObserver オブジェクトの寿命を保証する責務を持つ
+    //     (DoseManager は所有権を持たない、registration の所有権を明確化).
+    auto attach_observer(SafetyEventObserver* observer) noexcept -> void;
+
+    // 観測者を解除する (observer_ を nullptr に store). 以降 on_dose_pulse は通知をスキップ.
+    auto detach_observer() noexcept -> void;
 
     // ----- 静的純粋関数 (UT 用) -----
 
@@ -170,6 +203,11 @@ private:
     // 校正値 (1 パルスあたり cGy). constructor で固定、変更不可.
     DoseRatePerPulse_cGy_per_pulse rate_;
 
+    // 観測者 (Step 41 / CR-0028 で追加). attach_observer/detach_observer で更新.
+    // on_dose_pulse は acquire load 経由で参照、is_target_reached のエッジ検出時のみ notify.
+    // DoseManager は SafetyEventObserver オブジェクトの所有権を持たず、attach 側が寿命管理.
+    std::atomic<SafetyEventObserver*> observer_{nullptr};
+
     // ----- HZ-007 構造的予防 (SDD §7 SOUP-003/004 機能要求) -----
     // UNIT-200/401/201/202/203 と同パターンを 6 ユニット目に拡大.
     static_assert(std::atomic<std::uint64_t>::is_always_lock_free,
@@ -178,6 +216,10 @@ private:
     static_assert(std::atomic<bool>::is_always_lock_free,
         "std::atomic<bool> must be always lock-free for DoseManager target_reached_ / "
         "target_set_ (SDD §4.5, observer flag for UNIT-201/UNIT-203 dispatch).");
+    // Step 41 / CR-0028: observer_ pointer の lock-free 保証.
+    static_assert(std::atomic<SafetyEventObserver*>::is_always_lock_free,
+        "std::atomic<SafetyEventObserver*> must be always lock-free for DoseManager observer_ "
+        "(Step 41 / CR-0028, dispatch 機構の最小基盤, HZ-002/HZ-007 structural prevention).");
 };
 
 }  // namespace th25_ctrl

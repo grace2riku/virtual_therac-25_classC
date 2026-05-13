@@ -18,6 +18,7 @@
 #include "th25_ctrl/dose_manager.hpp"
 
 #include "th25_ctrl/common_types.hpp"
+#include "th25_ctrl/safety_event_observer.hpp"
 
 #include <gtest/gtest.h>
 
@@ -39,6 +40,25 @@ constexpr DoseRatePerPulse_cGy_per_pulse kRateRealistic{0.05};
 
 constexpr LifecycleState kReadyState = LifecycleState::Ready;
 constexpr LifecycleState kPrescriptionSetState = LifecycleState::PrescriptionSet;
+
+// Step 41 / CR-0028: SafetyEventObserver の最小 Mock 実装.
+// DoseManager から on_safety_event(SafetyEvent::DoseTargetReached) が呼ばれた回数を
+// atomic でカウントするだけのテスト helper. 並行試験 (UT-204-37) でも安全に使える.
+class CountingObserver final : public SafetyEventObserver {
+public:
+    auto on_safety_event(SafetyEvent event) noexcept -> void override {
+        if (event == SafetyEvent::DoseTargetReached) {
+            dose_target_reached_count_.fetch_add(1, std::memory_order_acq_rel);
+        }
+    }
+
+    [[nodiscard]] auto dose_target_reached_count() const noexcept -> std::uint64_t {
+        return dose_target_reached_count_.load(std::memory_order_acquire);
+    }
+
+private:
+    std::atomic<std::uint64_t> dose_target_reached_count_{0};
+};
 
 }  // namespace
 
@@ -589,6 +609,147 @@ TEST(DoseManager_ErrorCodes, CategoryConsistency) {
     EXPECT_EQ(severity_of(ErrorCode::DoseOutOfRange), Severity::Critical);
     EXPECT_EQ(severity_of(ErrorCode::DoseOverflow), Severity::Critical);
     EXPECT_EQ(severity_of(ErrorCode::InternalUnexpectedState), Severity::Critical);
+}
+
+// ============================================================================
+// Step 41 / CR-0028: Observer 結線 API + edge-detection 通知 関連 UT (5 件).
+//
+// 試験対象: UNIT-204 DoseManager の attach_observer / detach_observer + on_dose_pulse
+// 内 compare_exchange edge-detection ベースの SafetyEventObserver 通知.
+//
+// SDD §4.5 サンプル「目標到達 → BeamOff < 1 ms 連鎖」の構造的前提を確立する
+// dispatch 機構の最小基盤 (UNIT-201 結線・UNIT-203 結線は Step 42+ で完成).
+//
+// Therac-25 主要因類型 (SPRP §4.3.1):
+//   - A (race condition): observer_ atomic + target_reached_ compare_exchange edge-detection
+//     により observer 通知が確実に 1 回かつ重複しないことを構造的に保証.
+//   - F (legacy preconditions): is_always_lock_free static_assert を observer_ にも追加
+//     (build 時検証、HZ-007 構造的予防).
+// ============================================================================
+
+// ============================================================================
+// UT-204-33: attach_observer 後の on_dose_pulse で初回到達時に observer.notify される.
+// ============================================================================
+TEST(DoseManager_Observer, AttachObserverNotifiesOnFirstReached) {
+    DoseManager dm{kRateOneCGy};
+    CountingObserver obs;
+    dm.attach_observer(&obs);
+
+    ASSERT_TRUE(dm.set_dose_target(DoseUnit_cGy{3.0}, kReadyState).has_value());
+
+    EXPECT_EQ(obs.dose_target_reached_count(), 0U);
+    dm.on_dose_pulse(PulseCount{1});
+    EXPECT_EQ(obs.dose_target_reached_count(), 0U);
+    dm.on_dose_pulse(PulseCount{1});
+    EXPECT_EQ(obs.dose_target_reached_count(), 0U);
+    dm.on_dose_pulse(PulseCount{1});  // ここで accumulated = 3 に到達.
+    EXPECT_TRUE(dm.is_target_reached());
+    EXPECT_EQ(obs.dose_target_reached_count(), 1U);
+}
+
+// ============================================================================
+// UT-204-34: observer 未登録 (attach なし) 時は on_dose_pulse が notify しない
+//            — 従来挙動 (Step 22 範囲) の維持確認、observer pattern が opt-in であることを保証.
+// ============================================================================
+TEST(DoseManager_Observer, NoObserverThenNoNotifyButFlagStillSet) {
+    DoseManager dm{kRateOneCGy};
+    // attach_observer を呼ばない.
+
+    ASSERT_TRUE(dm.set_dose_target(DoseUnit_cGy{2.0}, kReadyState).has_value());
+    dm.on_dose_pulse(PulseCount{2});  // 到達.
+    EXPECT_TRUE(dm.is_target_reached());  // フラグ立てまでは従来通り発生.
+
+    // detach 状態でも例外/異常終了せず通常完了することを暗黙的に確認 (本テストが完了 = 検証成立).
+    SUCCEED();
+}
+
+// ============================================================================
+// UT-204-35: target 到達後の継続 on_dose_pulse では notify が重複しない
+//            — compare_exchange edge-detection により初回遷移のみ通知される.
+// ============================================================================
+TEST(DoseManager_Observer, NoDuplicateNotifyAfterReached) {
+    DoseManager dm{kRateOneCGy};
+    CountingObserver obs;
+    dm.attach_observer(&obs);
+
+    ASSERT_TRUE(dm.set_dose_target(DoseUnit_cGy{2.0}, kReadyState).has_value());
+    dm.on_dose_pulse(PulseCount{2});  // 初回到達 → 通知 1 回.
+    EXPECT_EQ(obs.dose_target_reached_count(), 1U);
+
+    // 到達後の継続 pulse: 重複通知なし.
+    dm.on_dose_pulse(PulseCount{1});
+    dm.on_dose_pulse(PulseCount{1});
+    dm.on_dose_pulse(PulseCount{10});
+    EXPECT_EQ(obs.dose_target_reached_count(), 1U);
+}
+
+// ============================================================================
+// UT-204-36: detach_observer 後の on_dose_pulse では notify されない.
+//            reset() 後に再度 set_dose_target → on_dose_pulse の到達でも通知しない.
+// ============================================================================
+TEST(DoseManager_Observer, DetachObserverStopsNotify) {
+    DoseManager dm{kRateOneCGy};
+    CountingObserver obs;
+    dm.attach_observer(&obs);
+    dm.detach_observer();  // すぐに解除.
+
+    ASSERT_TRUE(dm.set_dose_target(DoseUnit_cGy{2.0}, kReadyState).has_value());
+    dm.on_dose_pulse(PulseCount{2});  // 到達するが detach 済 → 通知なし.
+    EXPECT_TRUE(dm.is_target_reached());
+    EXPECT_EQ(obs.dose_target_reached_count(), 0U);
+
+    // reset 後に再度 target 設定 → 到達しても detach 状態は維持され通知なし.
+    dm.reset();
+    ASSERT_TRUE(dm.set_dose_target(DoseUnit_cGy{1.0}, kReadyState).has_value());
+    dm.on_dose_pulse(PulseCount{1});
+    EXPECT_TRUE(dm.is_target_reached());
+    EXPECT_EQ(obs.dose_target_reached_count(), 0U);
+}
+
+// ============================================================================
+// UT-204-37: 並行 attach/detach + on_dose_pulse の race-free 検証 (`tsan` プリセット必須).
+//
+// HZ-002 機械的予防の検証: observer_ atomic のリリース/取得順序が正しく機能し、
+// dispatch 機構の最小基盤として安全クリティカル経路にデータレースが存在しないことを
+// 両コンパイラ (clang-17/tsan + gcc-13/tsan) で機械検証する.
+// ============================================================================
+TEST(DoseManager_Observer, ConcurrentAttachDetachIsRaceFree) {
+    DoseManager dm{kRateOneCGy};
+    ASSERT_TRUE(dm.set_dose_target(DoseUnit_cGy{1.0e9}, kReadyState).has_value());
+
+    constexpr int kIterations = 5000;
+    std::atomic<bool> stop{false};
+
+    // producer: 1 kHz 想定の連続 pulse (到達検知 + 必要なら observer notify).
+    std::thread producer([&]() {
+        for (int i = 0; i < kIterations; ++i) {
+            dm.on_dose_pulse(PulseCount{1});
+        }
+        stop.store(true, std::memory_order_release);
+    });
+
+    // attacher / detacher 4 thread が並行に observer の付け外しを行う.
+    // do-while で最低 1 回 body 実行を保証 (CR-0021 教訓水平展開、PRB-0005/0006 同根本原因対策).
+    std::vector<CountingObserver> observers(4);
+    std::vector<std::thread> threads;
+    threads.reserve(4);
+    for (int t = 0; t < 4; ++t) {
+        threads.emplace_back([&, t]() {
+            do {
+                dm.attach_observer(&observers[t]);
+                dm.detach_observer();
+            } while (!stop.load(std::memory_order_acquire));
+        });
+    }
+
+    producer.join();
+    for (auto& th : threads) {
+        th.join();
+    }
+
+    // race-free を TSan が確認 (本テストが完了 = データレース 0、HZ-002 機械的予防が
+    // observer 結線経路でも成立).
+    SUCCEED();
 }
 
 }  // namespace th25_ctrl
