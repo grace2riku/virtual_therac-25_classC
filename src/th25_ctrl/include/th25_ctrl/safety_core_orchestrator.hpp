@@ -15,6 +15,11 @@
 //   - current_state()    : 現在状態の取得 (read-only, noexcept)
 //   - shutdown()         : 緊急停止 (signal-safe, noexcept)
 //
+// SafetyEventObserver 実装 (Step 44 / CR-0030 で追加):
+//   - on_safety_event(SafetyEvent) noexcept override : SafetyEvent::DoseTargetReached
+//     を受信した際に UNIT-203 BeamController の request_beam_off() を同期直接呼出.
+//     SDD §4.5 サンプル「目標到達 → BeamOff < 1 ms 連鎖」を実現する.
+//
 // Therac-25 hazard mapping:
 //   - HZ-001 (mode/target mismatch): 状態機械による不正遷移の構造的拒否
 //     (RCM-001). Idle→BeamOn 直接遷移 / BeamOn→Idle (BeamOff 通知なし) 等の
@@ -22,13 +27,19 @@
 //   - HZ-002 (race condition): state_ を std::atomic<LifecycleState> で保持
 //     (release-acquire ordering). イベントは UNIT-401 SPSC lock-free queue
 //     経由で配送 (SDD §9 SEP-003 構造的予防).
+//   - HZ-005 (dose calculation): Step 44 / CR-0030 で UNIT-204 DoseManager
+//     からの SafetyEvent::DoseTargetReached を本 Observer 経由で受信し、
+//     UNIT-203 BeamController への即時 BeamOff dispatch 経路を完成
+//     (SDD §4.5 サンプルの UT 粒度実証、IT-101 < 10 ms 実時間実測は Inc.1 完了 Step).
 //   - HZ-007 (legacy preconditions): static_assert(is_always_lock_free) で
 //     コンパイラ・標準ライブラリ更新時にビルド時 fail-stop.
 
 #pragma once
 
+#include "th25_ctrl/beam_controller.hpp"
 #include "th25_ctrl/common_types.hpp"
 #include "th25_ctrl/in_process_queue.hpp"
+#include "th25_ctrl/safety_event_observer.hpp"
 
 #include <atomic>
 #include <cstdint>
@@ -71,20 +82,37 @@ struct LifecycleEvent {
 
 // ============================================================================
 // SafetyCoreOrchestrator (SDD §4.2 UNIT-201).
+//
+// Step 44 / CR-0030: SafetyEventObserver を継承し、SafetyEvent::DoseTargetReached
+// を受信した際に UNIT-203 BeamController の request_beam_off() を同期直接呼出する.
+// DoseManager への attach は呼出側 (main / UT) の責務.
 // ============================================================================
-class SafetyCoreOrchestrator {
+class SafetyCoreOrchestrator : public SafetyEventObserver {
 public:
     // SDD §6.5 MessageBusCapacity = 4096.
     using EventQueue = InProcessQueue<LifecycleEvent, kDefaultMessageBusCapacity>;
 
-    explicit SafetyCoreOrchestrator(EventQueue& events) noexcept;
+    // 事前条件:
+    //   - events / beam_controller の寿命は本オブジェクトの寿命を上回ること.
+    //   - DoseManager への attach (`dose_manager.attach_observer(this)`) は呼出側の責務.
+    explicit SafetyCoreOrchestrator(
+        EventQueue& events, BeamController& beam_controller) noexcept;
 
     // SPSC 同様、所有権を一意に保つためコピー/ムーブ禁止.
     SafetyCoreOrchestrator(const SafetyCoreOrchestrator&) = delete;
     SafetyCoreOrchestrator(SafetyCoreOrchestrator&&) = delete;
     auto operator=(const SafetyCoreOrchestrator&) -> SafetyCoreOrchestrator& = delete;
     auto operator=(SafetyCoreOrchestrator&&) -> SafetyCoreOrchestrator& = delete;
-    ~SafetyCoreOrchestrator() = default;
+    ~SafetyCoreOrchestrator() override = default;
+
+    // ----- SafetyEventObserver override (Step 44 / CR-0030) -----
+
+    // SafetyEvent を受信し、種別に応じた dispatch を行う.
+    // SafetyEvent::DoseTargetReached: UNIT-203 BeamController.request_beam_off() を
+    //   同期直接呼出 (SDD §4.5「目標到達 → BeamOff < 1 ms 連鎖」、SafetyEventObserver
+    //   呼出契約「< 10 ms 以内」と整合). 戻り値は破棄 (Off/Stopping は no-op で許容、
+    //   SDD §4.4).
+    auto on_safety_event(SafetyEvent event) noexcept -> void override;
 
     // ----- SDD §4.2 公開 API -----
 
@@ -122,6 +150,7 @@ private:
     auto handle_event(const LifecycleEvent& event) noexcept -> void;
 
     EventQueue& events_;
+    BeamController& beam_controller_;  // Step 44 / CR-0030: BeamOff dispatch 先.
     std::atomic<LifecycleState> state_{LifecycleState::Init};
     std::atomic<bool> shutdown_requested_{false};
 

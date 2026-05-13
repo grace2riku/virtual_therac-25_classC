@@ -68,8 +68,25 @@ namespace {
 
 }  // namespace
 
-SafetyCoreOrchestrator::SafetyCoreOrchestrator(EventQueue& events) noexcept
-    : events_(events) {}
+SafetyCoreOrchestrator::SafetyCoreOrchestrator(
+    EventQueue& events, BeamController& beam_controller) noexcept
+    : events_(events), beam_controller_(beam_controller) {}
+
+auto SafetyCoreOrchestrator::on_safety_event(SafetyEvent event) noexcept -> void {
+    // SDD §4.5 「目標到達 → BeamOff < 1 ms 連鎖」.
+    // 本コールバックは UNIT-204 DoseManager の on_dose_pulse から
+    // (compare_exchange_strong edge-detection 後の) 初回到達時のみ呼出される.
+    // < 10 ms 以内の処理完了が要求される (safety_event_observer.hpp 呼出契約).
+    switch (event) {
+        case SafetyEvent::DoseTargetReached:
+            // UNIT-203 BeamController への即時 BeamOff dispatch.
+            // 戻り値は無視 (Off/Stopping は no-op で許容、SDD §4.4).
+            // request_beam_off は atomic store のみで構成され、ns 単位で完了するため
+            // < 10 ms 要件は構造的に満たされる (実時間実測は IT-101 / Inc.1 完了 Step で).
+            (void)beam_controller_.request_beam_off();
+            break;
+    }
+}
 
 auto SafetyCoreOrchestrator::next_state(
     LifecycleState from, LifecycleEventKind event) noexcept

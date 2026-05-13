@@ -15,8 +15,11 @@
 
 #include "th25_ctrl/safety_core_orchestrator.hpp"
 
+#include "th25_ctrl/beam_controller.hpp"
 #include "th25_ctrl/common_types.hpp"
+#include "th25_ctrl/dose_manager.hpp"
 #include "th25_ctrl/in_process_queue.hpp"
+#include "th25_ctrl/safety_event_observer.hpp"
 
 #include <gtest/gtest.h>
 
@@ -25,6 +28,8 @@
 #include <chrono>
 #include <thread>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace th25_ctrl {
 
@@ -35,7 +40,8 @@ using EventQueue = SafetyCoreOrchestrator::EventQueue;
 // ============================================================================
 TEST(SafetyCoreOrchestrator_Initial, IsInit) {
     EventQueue q;
-    SafetyCoreOrchestrator orch{q};
+    BeamController bc;
+    SafetyCoreOrchestrator orch{q, bc};
     EXPECT_EQ(orch.current_state(), LifecycleState::Init);
 }
 
@@ -44,7 +50,8 @@ TEST(SafetyCoreOrchestrator_Initial, IsInit) {
 // ============================================================================
 TEST(SafetyCoreOrchestrator_InitSubsystems, TransitionsToSelfCheck) {
     EventQueue q;
-    SafetyCoreOrchestrator orch{q};
+    BeamController bc;
+    SafetyCoreOrchestrator orch{q, bc};
 
     auto result = orch.init_subsystems();
     EXPECT_TRUE(result.has_value());
@@ -57,7 +64,8 @@ TEST(SafetyCoreOrchestrator_InitSubsystems, TransitionsToSelfCheck) {
 // ============================================================================
 TEST(SafetyCoreOrchestrator_InitSubsystems, SecondCallReturnsInternalUnexpectedState) {
     EventQueue q;
-    SafetyCoreOrchestrator orch{q};
+    BeamController bc;
+    SafetyCoreOrchestrator orch{q, bc};
 
     auto first = orch.init_subsystems();
     ASSERT_TRUE(first.has_value());
@@ -95,7 +103,8 @@ TEST(SafetyCoreOrchestrator_Ownership, IsNotCopyableNorMovable) {
 // ============================================================================
 TEST(SafetyCoreOrchestrator_Shutdown, SetsShutdownFlagWithoutChangingState) {
     EventQueue q;
-    SafetyCoreOrchestrator orch{q};
+    BeamController bc;
+    SafetyCoreOrchestrator orch{q, bc};
 
     static_assert(noexcept(orch.shutdown()));
 
@@ -114,7 +123,8 @@ TEST(SafetyCoreOrchestrator_Shutdown, SetsShutdownFlagWithoutChangingState) {
 // ============================================================================
 TEST(SafetyCoreOrchestrator_EventLoop, ReturnsZeroWhenShutdownFromIdle) {
     EventQueue q;
-    SafetyCoreOrchestrator orch{q};
+    BeamController bc;
+    SafetyCoreOrchestrator orch{q, bc};
 
     // Init → SelfCheck → SelfCheckPassed → Idle.
     ASSERT_TRUE(orch.init_subsystems().has_value());
@@ -328,7 +338,8 @@ TEST(SafetyCoreOrchestrator_Transition, ExhaustiveTableMatchesSdd) {
 // ============================================================================
 TEST(SafetyCoreOrchestrator_EventLoop, DispatchesQueuedEventsThroughStateMachine) {
     EventQueue q;
-    SafetyCoreOrchestrator orch{q};
+    BeamController bc;
+    SafetyCoreOrchestrator orch{q, bc};
 
     ASSERT_TRUE(orch.init_subsystems().has_value());
     EXPECT_EQ(orch.current_state(), LifecycleState::SelfCheck);
@@ -349,7 +360,8 @@ TEST(SafetyCoreOrchestrator_EventLoop, DispatchesQueuedEventsThroughStateMachine
 // ============================================================================
 TEST(SafetyCoreOrchestrator_EventLoop, IllegalEventTransitionsToHaltedAndExits) {
     EventQueue q;
-    SafetyCoreOrchestrator orch{q};
+    BeamController bc;
+    SafetyCoreOrchestrator orch{q, bc};
 
     // Init → SelfCheck → Idle.
     ASSERT_TRUE(orch.init_subsystems().has_value());
@@ -370,7 +382,8 @@ TEST(SafetyCoreOrchestrator_EventLoop, IllegalEventTransitionsToHaltedAndExits) 
 // ============================================================================
 TEST(SafetyCoreOrchestrator_Concurrency, SpscEventDeliveryIsRaceFree) {
     EventQueue q;
-    SafetyCoreOrchestrator orch{q};
+    BeamController bc;
+    SafetyCoreOrchestrator orch{q, bc};
 
     // Init → SelfCheck.
     ASSERT_TRUE(orch.init_subsystems().has_value());
@@ -408,6 +421,156 @@ TEST(SafetyCoreOrchestrator_Concurrency, SpscEventDeliveryIsRaceFree) {
     // ShutdownRequested 受信で Halted 終了 → 戻り値 1.
     EXPECT_EQ(rc, 1);
     EXPECT_EQ(orch.current_state(), LifecycleState::Halted);
+}
+
+// ============================================================================
+// UT-201-25: on_safety_event(DoseTargetReached) で BeamController.request_beam_off()
+//             が同期直接呼出される (Step 44 / CR-0030、SDD §4.5 サンプル UT 粒度).
+// ============================================================================
+//
+// BeamController を Off → Arming → On に遷移させた状態で on_safety_event を呼出し、
+// Stopping/Off に遷移することを確認. SafetyEventObserver 呼出契約「< 10 ms 以内」を
+// 実装が満たすことを構造的に検証 (BeamController.request_beam_off() は atomic store
+// のみで ns 単位で完了).
+TEST(SafetyCoreOrchestrator_Observer, DoseTargetReachedTriggersBeamOff) {
+    EventQueue q;
+    BeamController bc;
+    SafetyCoreOrchestrator orch{q, bc};
+
+    // BeamController を On 状態に遷移させる前準備: 許可フラグ設定 + Ready で request_beam_on.
+    bc.set_beam_on_permission(true);
+    ASSERT_TRUE(bc.request_beam_on(LifecycleState::Ready).has_value());
+    ASSERT_EQ(bc.current_state(), BeamState::On);
+
+    // on_safety_event(DoseTargetReached) を直接呼出.
+    // SafetyEventObserver* として呼出して virtual dispatch の整合性も確認.
+    SafetyEventObserver* const observer = &orch;
+    observer->on_safety_event(SafetyEvent::DoseTargetReached);
+
+    // BeamController が Stopping または Off に遷移したことを確認 (SDD §4.4 状態機械).
+    const BeamState after = bc.current_state();
+    EXPECT_TRUE(after == BeamState::Stopping || after == BeamState::Off)
+        << "BeamState after on_safety_event = " << static_cast<int>(after);
+}
+
+// ============================================================================
+// UT-201-26: DoseManager → SafetyCoreOrchestrator → BeamController 連鎖試験
+//             (Step 44 / CR-0030、SDD §4.5 サンプル「目標到達 → BeamOff < 1 ms 連鎖」
+//              UT 粒度実証).
+// ============================================================================
+//
+// attach + on_dose_pulse target 到達 → SafetyCoreOrchestrator の on_safety_event が
+// 呼ばれ → BeamController.request_beam_off() が呼ばれ → BeamState が変化する経路を
+// end-to-end で検証. IT-101 < 10 ms 実時間実測は Inc.1 完了 Step で実施.
+TEST(SafetyCoreOrchestrator_Observer, EndToEndDoseTargetToBeamOff) {
+    EventQueue q;
+    BeamController bc;
+    SafetyCoreOrchestrator orch{q, bc};
+
+    // BeamController を On 状態に遷移.
+    bc.set_beam_on_permission(true);
+    ASSERT_TRUE(bc.request_beam_on(LifecycleState::Ready).has_value());
+    ASSERT_EQ(bc.current_state(), BeamState::On);
+
+    // DoseManager に SafetyCoreOrchestrator を observer として attach.
+    DoseManager dm{DoseRatePerPulse_cGy_per_pulse{1.0}};  // 1 pulse = 1 cGy.
+    dm.attach_observer(&orch);
+
+    // 目標 3 cGy 設定 (Ready 状態) + 3 pulse 投入で target 到達.
+    ASSERT_TRUE(dm.set_dose_target(DoseUnit_cGy{3.0}, LifecycleState::Ready).has_value());
+    dm.on_dose_pulse(PulseCount{1});  // accumulated=1
+    dm.on_dose_pulse(PulseCount{1});  // accumulated=2
+    EXPECT_EQ(bc.current_state(), BeamState::On);  // 未到達 → BeamState 不変
+    dm.on_dose_pulse(PulseCount{1});  // accumulated=3 = target → 到達 → on_safety_event 発火
+
+    // BeamController が Stopping または Off に遷移したことを確認.
+    const BeamState after = bc.current_state();
+    EXPECT_TRUE(after == BeamState::Stopping || after == BeamState::Off)
+        << "BeamState after target reach = " << static_cast<int>(after);
+    EXPECT_TRUE(dm.is_target_reached());
+
+    // Cleanup: detach (必須ではないが寿命の明確化のため).
+    dm.detach_observer();
+}
+
+// ============================================================================
+// UT-201-27: 並行 producer pulse + 多 attacher/detacher + on_safety_event race-free
+//             (Step 44 / CR-0030、`tsan` プリセット必須、HZ-002 機械的予防が
+//              dispatch 機構結線にも展開).
+// ============================================================================
+//
+// 1 producer (on_dose_pulse 5000 回) + 4 attacher/detacher 並行で
+// `observer_` atomic + `on_safety_event` 経路の race-free を TSan で機械検証.
+// CR-0021 教訓水平展開: attacher/detacher は並行多重なので do-while パターン適用.
+// target は SRS-008 範囲内 10000 cGy (CR-0029 制定の SRS 範囲内セルフチェック適用、
+// UT-204-37 同パターンを参照、producer 5000 pulse では到達しない設計).
+TEST(SafetyCoreOrchestrator_Observer, ConcurrentAttachDetachIsRaceFree) {
+    EventQueue q;
+    BeamController bc;
+    SafetyCoreOrchestrator orch{q, bc};
+
+    DoseManager dm{DoseRatePerPulse_cGy_per_pulse{1.0}};
+    // target を SRS-008 範囲内 10000 cGy (= 10000 pulses) に設定し、producer の 5000 pulse
+    // では到達しないようにする (PRB-0008 / CR-0029 教訓: SRS 範囲内セルフチェック適用、
+    // UT-204-37 同パターン).
+    ASSERT_TRUE(dm.set_dose_target(DoseUnit_cGy{10000.0}, LifecycleState::Ready).has_value());
+
+    constexpr int kIterations = 5000;
+    std::atomic<bool> stop{false};
+
+    // producer: 1 kHz 想定の連続 pulse (到達しないため observer notify は発火しない).
+    std::thread producer([&]() {
+        for (int i = 0; i < kIterations; ++i) {
+            dm.on_dose_pulse(PulseCount{1});
+        }
+        stop.store(true, std::memory_order_release);
+    });
+
+    // 4 thread が並行に attach/detach を交互実行.
+    // do-while パターンで最低 1 回 body 実行を構造的に保証
+    // (CR-0021 教訓水平展開、PRB-0005 / PRB-0006 同根本原因対策).
+    constexpr int kAttachers = 4;
+    std::vector<std::thread> attachers;
+    attachers.reserve(kAttachers);
+    for (int i = 0; i < kAttachers; ++i) {
+        attachers.emplace_back([&, i]() {
+            bool attach_phase = (i % 2 == 0);
+            do {
+                if (attach_phase) {
+                    dm.attach_observer(&orch);
+                } else {
+                    dm.detach_observer();
+                }
+                attach_phase = !attach_phase;
+            } while (!stop.load(std::memory_order_acquire));
+        });
+    }
+
+    producer.join();
+    for (auto& t : attachers) {
+        t.join();
+    }
+
+    // TSan が race を検出しなければ SUCCEED. observer 通知は target 未到達のため発火せず、
+    // `observer_` atomic 自体の attach/detach 並行 race-free のみを検証.
+    SUCCEED();
+}
+
+// ============================================================================
+// UT-201-28: SafetyCoreOrchestrator は SafetyEventObserver を継承 + on_safety_event
+//             は noexcept (compile-time 表明、Step 44 / CR-0030).
+// ============================================================================
+TEST(SafetyCoreOrchestrator_Observer, IsSafetyEventObserverAndNoexcept) {
+    // 継承関係の compile-time 表明.
+    static_assert(std::is_base_of_v<SafetyEventObserver, SafetyCoreOrchestrator>,
+        "SafetyCoreOrchestrator must inherit from SafetyEventObserver "
+        "(Step 44 / CR-0030).");
+
+    // on_safety_event は noexcept (SafetyEventObserver 呼出契約).
+    static_assert(noexcept(std::declval<SafetyCoreOrchestrator&>().on_safety_event(
+        SafetyEvent::DoseTargetReached)),
+        "SafetyCoreOrchestrator::on_safety_event must be noexcept "
+        "(SafetyEventObserver contract).");
 }
 
 }  // namespace th25_ctrl
