@@ -69,8 +69,11 @@ namespace {
 }  // namespace
 
 SafetyCoreOrchestrator::SafetyCoreOrchestrator(
-    EventQueue& events, BeamController& beam_controller) noexcept
-    : events_(events), beam_controller_(beam_controller) {}
+    EventQueue& events, BeamController& beam_controller,
+    StartupSelfCheck& startup_self_check) noexcept
+    : events_(events),
+      beam_controller_(beam_controller),
+      startup_self_check_(startup_self_check) {}
 
 auto SafetyCoreOrchestrator::on_safety_event(SafetyEvent event) noexcept -> void {
     // SDD §4.5 「目標到達 → BeamOff < 1 ms 連鎖」.
@@ -121,7 +124,26 @@ auto SafetyCoreOrchestrator::init_subsystems() noexcept
         return Result<void, ErrorCode>::error(
             ErrorCode::InternalUnexpectedState);
     }
-    return Result<void, ErrorCode>::ok();
+
+    // Step 45 / CR-0031: UNIT-208 StartupSelfCheck の起動時 4 項目自己診断を
+    // 同期呼出 (IF-U-009). 結果に応じて SelfCheck → Idle / Error へ遷移する.
+    const auto self_check = startup_self_check_.perform_self_check();
+    if (self_check.has_value()) {
+        // 4 項目全 Pass: SelfCheck → Idle (SDD §6.1 状態遷移許可表).
+        handle_event(
+            LifecycleEvent{LifecycleEventKind::SelfCheckPassed, std::nullopt});
+        return Result<void, ErrorCode>::ok();
+    }
+
+    // いずれか Fail: SelfCheck → Error + shutdown_requested_ (handle_event 内で実施、
+    // SDD §6.1「SelfCheck → いずれか Fail → Error → 即 shutdown()」).
+    // perform_self_check() の詳細 ErrorCode は LifecycleEvent.error_code に carry
+    // する (AuditLogger 結線 Step で dispatch 経路に活用予定、現状 handle_event は
+    // error_code を消費しない).
+    handle_event(LifecycleEvent{
+        LifecycleEventKind::SelfCheckFailed, self_check.error_code()});
+    // SDD §4.2 公開 API 表 エラー処理欄: 自己診断失敗時は InternalAssertion を返す.
+    return Result<void, ErrorCode>::error(ErrorCode::InternalAssertion);
 }
 
 auto SafetyCoreOrchestrator::handle_event(const LifecycleEvent& event) noexcept

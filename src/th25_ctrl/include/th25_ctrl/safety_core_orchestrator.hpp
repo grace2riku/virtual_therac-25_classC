@@ -10,7 +10,8 @@
 // 経由の LifecycleEvent. 各 Manager (UNIT-202〜206) との結線は後続 Step で実装.
 //
 // SDD §4.2 公開 API (4 種):
-//   - init_subsystems()  : Init → SelfCheck (起動時 1 回呼出)
+//   - init_subsystems()  : Init → SelfCheck → (UNIT-208 自己診断) → Idle/Error
+//                          (起動時 1 回呼出)
 //   - run_event_loop()   : メインループ (戻り値: 0=正常 / 非 0=異常)
 //   - current_state()    : 現在状態の取得 (read-only, noexcept)
 //   - shutdown()         : 緊急停止 (signal-safe, noexcept)
@@ -19,6 +20,12 @@
 //   - on_safety_event(SafetyEvent) noexcept override : SafetyEvent::DoseTargetReached
 //     を受信した際に UNIT-203 BeamController の request_beam_off() を同期直接呼出.
 //     SDD §4.5 サンプル「目標到達 → BeamOff < 1 ms 連鎖」を実現する.
+//
+// UNIT-208 StartupSelfCheck 結線 (Step 45 / CR-0031 で追加):
+//   - init_subsystems() が Init → SelfCheck 遷移後、UNIT-208 perform_self_check()
+//     を同期呼出 (IF-U-009). 4 項目全 Pass で SelfCheck → Idle、いずれか Fail で
+//     SelfCheck → Error + shutdown_requested_ (SDD §4.2 状態機械図 / §6.1 状態遷移
+//     許可表). RCM-013 (起動時状態検証) 経路完成.
 //
 // Therac-25 hazard mapping:
 //   - HZ-001 (mode/target mismatch): 状態機械による不正遷移の構造的拒否
@@ -31,6 +38,9 @@
 //     からの SafetyEvent::DoseTargetReached を本 Observer 経由で受信し、
 //     UNIT-203 BeamController への即時 BeamOff dispatch 経路を完成
 //     (SDD §4.5 サンプルの UT 粒度実証、IT-101 < 10 ms 実時間実測は Inc.1 完了 Step).
+//   - HZ-009 (power-loss / restart undefined behavior): Step 45 / CR-0031 で
+//     init_subsystems() が UNIT-208 perform_self_check() を結線. 不定状態のまま
+//     治療開始することを起動時 4 項目自己診断で構造的に拒否 (RCM-013 経路完成).
 //   - HZ-007 (legacy preconditions): static_assert(is_always_lock_free) で
 //     コンパイラ・標準ライブラリ更新時にビルド時 fail-stop.
 
@@ -40,6 +50,7 @@
 #include "th25_ctrl/common_types.hpp"
 #include "th25_ctrl/in_process_queue.hpp"
 #include "th25_ctrl/safety_event_observer.hpp"
+#include "th25_ctrl/startup_self_check.hpp"
 
 #include <atomic>
 #include <cstdint>
@@ -86,6 +97,10 @@ struct LifecycleEvent {
 // Step 44 / CR-0030: SafetyEventObserver を継承し、SafetyEvent::DoseTargetReached
 // を受信した際に UNIT-203 BeamController の request_beam_off() を同期直接呼出する.
 // DoseManager への attach は呼出側 (main / UT) の責務.
+//
+// Step 45 / CR-0031: init_subsystems() が UNIT-208 StartupSelfCheck の
+// perform_self_check() を同期呼出する (IF-U-009). startup_self_check の寿命は
+// 呼出側 (main / UT) が保証する.
 // ============================================================================
 class SafetyCoreOrchestrator : public SafetyEventObserver {
 public:
@@ -93,10 +108,12 @@ public:
     using EventQueue = InProcessQueue<LifecycleEvent, kDefaultMessageBusCapacity>;
 
     // 事前条件:
-    //   - events / beam_controller の寿命は本オブジェクトの寿命を上回ること.
+    //   - events / beam_controller / startup_self_check の寿命は本オブジェクトの
+    //     寿命を上回ること.
     //   - DoseManager への attach (`dose_manager.attach_observer(this)`) は呼出側の責務.
     explicit SafetyCoreOrchestrator(
-        EventQueue& events, BeamController& beam_controller) noexcept;
+        EventQueue& events, BeamController& beam_controller,
+        StartupSelfCheck& startup_self_check) noexcept;
 
     // SPSC 同様、所有権を一意に保つためコピー/ムーブ禁止.
     SafetyCoreOrchestrator(const SafetyCoreOrchestrator&) = delete;
@@ -116,9 +133,15 @@ public:
 
     // ----- SDD §4.2 公開 API -----
 
-    // Init → SelfCheck への遷移. プロセス起動直後に main から 1 回のみ呼出.
-    // 既に Init 以外で呼ばれた場合は InternalUnexpectedState を返す
-    // (compare_exchange による idempotency 保護).
+    // 起動時初期化. プロセス起動直後に main から 1 回のみ呼出.
+    //   1. Init → SelfCheck へ遷移 (compare_exchange による idempotency 保護).
+    //      既に Init 以外で呼ばれた場合は InternalUnexpectedState を返す.
+    //   2. UNIT-208 StartupSelfCheck::perform_self_check() を同期呼出 (IF-U-009).
+    //   3. 4 項目全 Pass: SelfCheck → Idle へ遷移し Result::ok() を返す.
+    //      いずれか Fail: SelfCheck → Error へ遷移 + shutdown_requested_ をセットし、
+    //      SDD §4.2 公開 API 表 エラー処理欄に従い InternalAssertion を返す
+    //      (perform_self_check() の詳細 ErrorCode は LifecycleEvent.error_code に
+    //      carry され、AuditLogger 結線 Step で dispatch 経路に活用予定).
     [[nodiscard]] auto init_subsystems() noexcept -> Result<void, ErrorCode>;
 
     // メインイベントループ. shutdown_requested_ が立つまでメッセージを処理する.
@@ -151,6 +174,7 @@ private:
 
     EventQueue& events_;
     BeamController& beam_controller_;  // Step 44 / CR-0030: BeamOff dispatch 先.
+    StartupSelfCheck& startup_self_check_;  // Step 45 / CR-0031: 起動時自己診断 (IF-U-009).
     std::atomic<LifecycleState> state_{LifecycleState::Init};
     std::atomic<bool> shutdown_requested_{false};
 

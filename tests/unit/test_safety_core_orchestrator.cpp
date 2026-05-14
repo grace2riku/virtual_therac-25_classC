@@ -9,17 +9,22 @@
 //   - 正常系 / 境界値 / 異常系 / 並行処理 / 資源 / データフロー
 //
 // Therac-25 主要因類型 (SPRP §4.3.1):
-//   - A (race condition): SPSC イベント配送 concurrent 試験 (UT-201-23, tsan).
+//   - A (race condition): SPSC イベント配送 concurrent 試験 (UT-201-24, tsan).
 //   - D (interlock missing): 不正遷移は Halted + shutdown_requested_ で構造的に拒否.
+//     Step 45 / CR-0031: 起動時 4 項目自己診断 (UNIT-208) 結線により「不定状態の
+//     まま治療開始」類型も SelfCheck → Error で構造的に拒否 (RCM-013).
 //   - F (legacy preconditions): is_always_lock_free static_assert (build 時検証).
 
 #include "th25_ctrl/safety_core_orchestrator.hpp"
 
 #include "th25_ctrl/beam_controller.hpp"
+#include "th25_ctrl/bending_magnet_manager.hpp"
 #include "th25_ctrl/common_types.hpp"
 #include "th25_ctrl/dose_manager.hpp"
 #include "th25_ctrl/in_process_queue.hpp"
 #include "th25_ctrl/safety_event_observer.hpp"
+#include "th25_ctrl/startup_self_check.hpp"
+#include "th25_ctrl/turntable_manager.hpp"
 
 #include <gtest/gtest.h>
 
@@ -35,27 +40,57 @@ namespace th25_ctrl {
 
 using EventQueue = SafetyCoreOrchestrator::EventQueue;
 
+namespace {
+
+// 既定 rate (UNIT-204 DoseManager コンストラクタ用、SRS-009 校正値).
+constexpr DoseRatePerPulse_cGy_per_pulse kDefaultRate{0.05};
+
+// テスト用 fixture: SafetyCoreOrchestrator とその依存 (EventQueue / BeamController /
+// StartupSelfCheck + UNIT-208 が必要とする Manager 三点) を保持する.
+// StartupSelfCheck は **4 項目全 Pass の初期構成** (ターンテーブル Light 位置 /
+// ベンディング磁石 0 A / 電子銃 0 mA / ドーズ積算 0) で構築する
+// (test_startup_self_check.cpp の StartupSelfCheckFixture と同パターン).
+// Step 45 / CR-0031: コンストラクタ 3 引数化に伴い導入.
+struct OrchestratorFixture {
+    EventQueue q;
+    BeamController bc;
+    TurntableManager turntable;
+    BendingMagnetManager bending_magnet;
+    DoseManager self_check_dose{kDefaultRate};
+    StartupSelfCheck self_check{turntable, bending_magnet, self_check_dose};
+    SafetyCoreOrchestrator orch{q, bc, self_check};
+
+    OrchestratorFixture() {
+        // 起動時自己診断 4 項目を全 Pass の初期構成にする.
+        turntable.inject_sensor_readings(
+            kLightPositionMm, kLightPositionMm, kLightPositionMm);
+        bending_magnet.inject_actual_current(MagnetCurrent_A{0.0});
+        self_check.inject_electron_gun_current(ElectronGunCurrent_mA{0.0});
+        // DoseManager は default で accumulated_pulses_ = 0.
+    }
+};
+
+}  // namespace
+
 // ============================================================================
 // UT-201-01: 初期状態 = Init
 // ============================================================================
 TEST(SafetyCoreOrchestrator_Initial, IsInit) {
-    EventQueue q;
-    BeamController bc;
-    SafetyCoreOrchestrator orch{q, bc};
-    EXPECT_EQ(orch.current_state(), LifecycleState::Init);
+    OrchestratorFixture f;
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Init);
 }
 
 // ============================================================================
-// UT-201-02: init_subsystems() で Init → SelfCheck
+// UT-201-02: init_subsystems() で Init → SelfCheck → (UNIT-208 自己診断 全 Pass)
+//             → Idle (Step 45 / CR-0031、SDD §4.2 状態機械図 / §6.1 状態遷移許可表).
 // ============================================================================
-TEST(SafetyCoreOrchestrator_InitSubsystems, TransitionsToSelfCheck) {
-    EventQueue q;
-    BeamController bc;
-    SafetyCoreOrchestrator orch{q, bc};
+TEST(SafetyCoreOrchestrator_InitSubsystems, RunsSelfCheckAndTransitionsToIdle) {
+    OrchestratorFixture f;  // fixture は 4 項目全 Pass の初期構成.
 
-    auto result = orch.init_subsystems();
+    auto result = f.orch.init_subsystems();
     EXPECT_TRUE(result.has_value());
-    EXPECT_EQ(orch.current_state(), LifecycleState::SelfCheck);
+    // Step 45 / CR-0031: 自己診断結線により Init → SelfCheck → (4 項目全 Pass) → Idle.
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Idle);
 }
 
 // ============================================================================
@@ -63,19 +98,17 @@ TEST(SafetyCoreOrchestrator_InitSubsystems, TransitionsToSelfCheck) {
 // (SDD §4.2 事前条件「main から 1 回のみ呼出」の構造的保護).
 // ============================================================================
 TEST(SafetyCoreOrchestrator_InitSubsystems, SecondCallReturnsInternalUnexpectedState) {
-    EventQueue q;
-    BeamController bc;
-    SafetyCoreOrchestrator orch{q, bc};
+    OrchestratorFixture f;
 
-    auto first = orch.init_subsystems();
+    auto first = f.orch.init_subsystems();
     ASSERT_TRUE(first.has_value());
 
-    auto second = orch.init_subsystems();
+    auto second = f.orch.init_subsystems();
     EXPECT_FALSE(second.has_value());
     EXPECT_EQ(second.error_code(), ErrorCode::InternalUnexpectedState);
 
-    // 状態は SelfCheck のまま (Init には戻らない).
-    EXPECT_EQ(orch.current_state(), LifecycleState::SelfCheck);
+    // 状態は Idle のまま (Init には戻らない、自己診断 全 Pass 後).
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Idle);
 }
 
 // ============================================================================
@@ -102,19 +135,18 @@ TEST(SafetyCoreOrchestrator_Ownership, IsNotCopyableNorMovable) {
 // (state は呼出時のまま. SDD §4.2 「signal handler から呼出可」)
 // ============================================================================
 TEST(SafetyCoreOrchestrator_Shutdown, SetsShutdownFlagWithoutChangingState) {
-    EventQueue q;
-    BeamController bc;
-    SafetyCoreOrchestrator orch{q, bc};
+    OrchestratorFixture f;
 
-    static_assert(noexcept(orch.shutdown()));
+    static_assert(noexcept(f.orch.shutdown()));
 
-    auto init = orch.init_subsystems();
+    auto init = f.orch.init_subsystems();
     ASSERT_TRUE(init.has_value());
-    EXPECT_EQ(orch.current_state(), LifecycleState::SelfCheck);
+    // Step 45 / CR-0031: 自己診断 全 Pass で Idle まで遷移済.
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Idle);
 
-    orch.shutdown();
+    f.orch.shutdown();
     // shutdown() は state を変更しない (BeamState 制御は Step 20+).
-    EXPECT_EQ(orch.current_state(), LifecycleState::SelfCheck);
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Idle);
 }
 
 // ============================================================================
@@ -122,20 +154,18 @@ TEST(SafetyCoreOrchestrator_Shutdown, SetsShutdownFlagWithoutChangingState) {
 // (Halted/Error 以外の状態では正常終了)
 // ============================================================================
 TEST(SafetyCoreOrchestrator_EventLoop, ReturnsZeroWhenShutdownFromIdle) {
-    EventQueue q;
-    BeamController bc;
-    SafetyCoreOrchestrator orch{q, bc};
+    OrchestratorFixture f;
 
-    // Init → SelfCheck → SelfCheckPassed → Idle.
-    ASSERT_TRUE(orch.init_subsystems().has_value());
-    ASSERT_TRUE(q.try_publish({LifecycleEventKind::SelfCheckPassed, std::nullopt}));
+    // Step 45 / CR-0031: init_subsystems() が Init → SelfCheck → (全 Pass) → Idle.
+    ASSERT_TRUE(f.orch.init_subsystems().has_value());
+    ASSERT_EQ(f.orch.current_state(), LifecycleState::Idle);
 
-    std::thread loop([&]() { orch.shutdown(); });
+    std::thread loop([&]() { f.orch.shutdown(); });
     loop.join();
 
     // shutdown 後に loop を起動 (1 イテレーションで終了).
     // Idle 状態のままなので戻り値は 0.
-    auto rc = orch.run_event_loop();
+    auto rc = f.orch.run_event_loop();
     EXPECT_EQ(rc, 0);
 }
 
@@ -337,21 +367,19 @@ TEST(SafetyCoreOrchestrator_Transition, ExhaustiveTableMatchesSdd) {
 // (init_subsystems → SelfCheckPassed → PrescriptionReceived → ShutdownRequested)
 // ============================================================================
 TEST(SafetyCoreOrchestrator_EventLoop, DispatchesQueuedEventsThroughStateMachine) {
-    EventQueue q;
-    BeamController bc;
-    SafetyCoreOrchestrator orch{q, bc};
+    OrchestratorFixture f;
 
-    ASSERT_TRUE(orch.init_subsystems().has_value());
-    EXPECT_EQ(orch.current_state(), LifecycleState::SelfCheck);
+    // Step 45 / CR-0031: init_subsystems() が Init → SelfCheck → (全 Pass) → Idle.
+    ASSERT_TRUE(f.orch.init_subsystems().has_value());
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Idle);
 
-    ASSERT_TRUE(q.try_publish({LifecycleEventKind::SelfCheckPassed, std::nullopt}));
-    ASSERT_TRUE(q.try_publish({LifecycleEventKind::PrescriptionReceived, std::nullopt}));
-    ASSERT_TRUE(q.try_publish({LifecycleEventKind::ShutdownRequested, std::nullopt}));
+    ASSERT_TRUE(f.q.try_publish({LifecycleEventKind::PrescriptionReceived, std::nullopt}));
+    ASSERT_TRUE(f.q.try_publish({LifecycleEventKind::ShutdownRequested, std::nullopt}));
 
-    auto rc = orch.run_event_loop();
+    auto rc = f.orch.run_event_loop();
     // ShutdownRequested で Halted に遷移するため、戻り値は 1.
     EXPECT_EQ(rc, 1);
-    EXPECT_EQ(orch.current_state(), LifecycleState::Halted);
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Halted);
 }
 
 // ============================================================================
@@ -359,20 +387,18 @@ TEST(SafetyCoreOrchestrator_EventLoop, DispatchesQueuedEventsThroughStateMachine
 // (Idle 状態で BeamOnRequested を投入 → Halted)
 // ============================================================================
 TEST(SafetyCoreOrchestrator_EventLoop, IllegalEventTransitionsToHaltedAndExits) {
-    EventQueue q;
-    BeamController bc;
-    SafetyCoreOrchestrator orch{q, bc};
+    OrchestratorFixture f;
 
-    // Init → SelfCheck → Idle.
-    ASSERT_TRUE(orch.init_subsystems().has_value());
-    ASSERT_TRUE(q.try_publish({LifecycleEventKind::SelfCheckPassed, std::nullopt}));
+    // Step 45 / CR-0031: init_subsystems() が Init → SelfCheck → (全 Pass) → Idle.
+    ASSERT_TRUE(f.orch.init_subsystems().has_value());
+    ASSERT_EQ(f.orch.current_state(), LifecycleState::Idle);
 
     // Idle で BeamOnRequested は不正 (PrescriptionSet → Ready を経由しないため).
-    ASSERT_TRUE(q.try_publish({LifecycleEventKind::BeamOnRequested, std::nullopt}));
+    ASSERT_TRUE(f.q.try_publish({LifecycleEventKind::BeamOnRequested, std::nullopt}));
 
-    auto rc = orch.run_event_loop();
+    auto rc = f.orch.run_event_loop();
     EXPECT_EQ(rc, 1);
-    EXPECT_EQ(orch.current_state(), LifecycleState::Halted);
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Halted);
 }
 
 // ============================================================================
@@ -381,46 +407,44 @@ TEST(SafetyCoreOrchestrator_EventLoop, IllegalEventTransitionsToHaltedAndExits) 
 // tsan プリセットで race condition 検出 0 を期待.
 // ============================================================================
 TEST(SafetyCoreOrchestrator_Concurrency, SpscEventDeliveryIsRaceFree) {
-    EventQueue q;
-    BeamController bc;
-    SafetyCoreOrchestrator orch{q, bc};
+    OrchestratorFixture f;
 
-    // Init → SelfCheck.
-    ASSERT_TRUE(orch.init_subsystems().has_value());
+    // Step 45 / CR-0031: init_subsystems() が Init → SelfCheck → (全 Pass) → Idle.
+    ASSERT_TRUE(f.orch.init_subsystems().has_value());
+    ASSERT_EQ(f.orch.current_state(), LifecycleState::Idle);
 
-    // Producer: 一連のイベント (SelfCheckPassed → PrescriptionRecv → Validated
-    //           → BeamOnReq → DoseTargetReached → ShutdownReq) を順次投入.
+    // Producer: Idle を起点とする正常治療サイクル (PrescriptionRecv → Validated
+    //           → BeamOnReq → DoseTargetReached で Idle に戻る) を反復投入し、
+    //           最後に ShutdownReq でループ終了.
     constexpr int kCycles = 200;
     std::thread producer([&]() {
         for (int i = 0; i < kCycles; ++i) {
-            const std::array<LifecycleEventKind, 6> seq{
-                LifecycleEventKind::SelfCheckPassed,        // 初回のみ有効
-                LifecycleEventKind::PrescriptionReceived,
-                LifecycleEventKind::PrescriptionValidated,
-                LifecycleEventKind::BeamOnRequested,
-                LifecycleEventKind::DoseTargetReached,
-                LifecycleEventKind::PrescriptionReceived,   // (次サイクル開始)
+            const std::array<LifecycleEventKind, 4> seq{
+                LifecycleEventKind::PrescriptionReceived,   // Idle → PrescriptionSet
+                LifecycleEventKind::PrescriptionValidated,  // PrescriptionSet → Ready
+                LifecycleEventKind::BeamOnRequested,        // Ready → BeamOn
+                LifecycleEventKind::DoseTargetReached,      // BeamOn → Idle
             };
             for (auto kind : seq) {
-                while (!q.try_publish({kind, std::nullopt})) {
+                while (!f.q.try_publish({kind, std::nullopt})) {
                     std::this_thread::yield();
                 }
             }
         }
         // 最後に ShutdownRequested を投入してループ終了.
-        while (!q.try_publish({LifecycleEventKind::ShutdownRequested, std::nullopt})) {
+        while (!f.q.try_publish({LifecycleEventKind::ShutdownRequested, std::nullopt})) {
             std::this_thread::yield();
         }
     });
 
     // Consumer: orchestrator の run_event_loop が単一 consumer として動作.
-    auto rc = orch.run_event_loop();
+    auto rc = f.orch.run_event_loop();
 
     producer.join();
 
     // ShutdownRequested 受信で Halted 終了 → 戻り値 1.
     EXPECT_EQ(rc, 1);
-    EXPECT_EQ(orch.current_state(), LifecycleState::Halted);
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Halted);
 }
 
 // ============================================================================
@@ -433,22 +457,20 @@ TEST(SafetyCoreOrchestrator_Concurrency, SpscEventDeliveryIsRaceFree) {
 // 実装が満たすことを構造的に検証 (BeamController.request_beam_off() は atomic store
 // のみで ns 単位で完了).
 TEST(SafetyCoreOrchestrator_Observer, DoseTargetReachedTriggersBeamOff) {
-    EventQueue q;
-    BeamController bc;
-    SafetyCoreOrchestrator orch{q, bc};
+    OrchestratorFixture f;
 
     // BeamController を On 状態に遷移させる前準備: 許可フラグ設定 + Ready で request_beam_on.
-    bc.set_beam_on_permission(true);
-    ASSERT_TRUE(bc.request_beam_on(LifecycleState::Ready).has_value());
-    ASSERT_EQ(bc.current_state(), BeamState::On);
+    f.bc.set_beam_on_permission(true);
+    ASSERT_TRUE(f.bc.request_beam_on(LifecycleState::Ready).has_value());
+    ASSERT_EQ(f.bc.current_state(), BeamState::On);
 
     // on_safety_event(DoseTargetReached) を直接呼出.
     // SafetyEventObserver* として呼出して virtual dispatch の整合性も確認.
-    SafetyEventObserver* const observer = &orch;
+    SafetyEventObserver* const observer = &f.orch;
     observer->on_safety_event(SafetyEvent::DoseTargetReached);
 
     // BeamController が Stopping または Off に遷移したことを確認 (SDD §4.4 状態機械).
-    const BeamState after = bc.current_state();
+    const BeamState after = f.bc.current_state();
     EXPECT_TRUE(after == BeamState::Stopping || after == BeamState::Off)
         << "BeamState after on_safety_event = " << static_cast<int>(after);
 }
@@ -463,28 +485,27 @@ TEST(SafetyCoreOrchestrator_Observer, DoseTargetReachedTriggersBeamOff) {
 // 呼ばれ → BeamController.request_beam_off() が呼ばれ → BeamState が変化する経路を
 // end-to-end で検証. IT-101 < 10 ms 実時間実測は Inc.1 完了 Step で実施.
 TEST(SafetyCoreOrchestrator_Observer, EndToEndDoseTargetToBeamOff) {
-    EventQueue q;
-    BeamController bc;
-    SafetyCoreOrchestrator orch{q, bc};
+    OrchestratorFixture f;
 
     // BeamController を On 状態に遷移.
-    bc.set_beam_on_permission(true);
-    ASSERT_TRUE(bc.request_beam_on(LifecycleState::Ready).has_value());
-    ASSERT_EQ(bc.current_state(), BeamState::On);
+    f.bc.set_beam_on_permission(true);
+    ASSERT_TRUE(f.bc.request_beam_on(LifecycleState::Ready).has_value());
+    ASSERT_EQ(f.bc.current_state(), BeamState::On);
 
-    // DoseManager に SafetyCoreOrchestrator を observer として attach.
+    // DoseManager に SafetyCoreOrchestrator を observer として attach
+    // (本試験専用の DoseManager、fixture の self_check_dose とは独立).
     DoseManager dm{DoseRatePerPulse_cGy_per_pulse{1.0}};  // 1 pulse = 1 cGy.
-    dm.attach_observer(&orch);
+    dm.attach_observer(&f.orch);
 
     // 目標 3 cGy 設定 (Ready 状態) + 3 pulse 投入で target 到達.
     ASSERT_TRUE(dm.set_dose_target(DoseUnit_cGy{3.0}, LifecycleState::Ready).has_value());
     dm.on_dose_pulse(PulseCount{1});  // accumulated=1
     dm.on_dose_pulse(PulseCount{1});  // accumulated=2
-    EXPECT_EQ(bc.current_state(), BeamState::On);  // 未到達 → BeamState 不変
+    EXPECT_EQ(f.bc.current_state(), BeamState::On);  // 未到達 → BeamState 不変
     dm.on_dose_pulse(PulseCount{1});  // accumulated=3 = target → 到達 → on_safety_event 発火
 
     // BeamController が Stopping または Off に遷移したことを確認.
-    const BeamState after = bc.current_state();
+    const BeamState after = f.bc.current_state();
     EXPECT_TRUE(after == BeamState::Stopping || after == BeamState::Off)
         << "BeamState after target reach = " << static_cast<int>(after);
     EXPECT_TRUE(dm.is_target_reached());
@@ -505,10 +526,9 @@ TEST(SafetyCoreOrchestrator_Observer, EndToEndDoseTargetToBeamOff) {
 // target は SRS-008 範囲内 10000 cGy (CR-0029 制定の SRS 範囲内セルフチェック適用、
 // UT-204-37 同パターンを参照、producer 5000 pulse では到達しない設計).
 TEST(SafetyCoreOrchestrator_Observer, ConcurrentAttachDetachIsRaceFree) {
-    EventQueue q;
-    BeamController bc;
-    SafetyCoreOrchestrator orch{q, bc};
+    OrchestratorFixture f;
 
+    // 本試験専用の DoseManager (fixture の self_check_dose とは独立).
     DoseManager dm{DoseRatePerPulse_cGy_per_pulse{1.0}};
     // target を SRS-008 範囲内 10000 cGy (= 10000 pulses) に設定し、producer の 5000 pulse
     // では到達しないようにする (PRB-0008 / CR-0029 教訓: SRS 範囲内セルフチェック適用、
@@ -537,7 +557,7 @@ TEST(SafetyCoreOrchestrator_Observer, ConcurrentAttachDetachIsRaceFree) {
             bool attach_phase = (i % 2 == 0);
             do {
                 if (attach_phase) {
-                    dm.attach_observer(&orch);
+                    dm.attach_observer(&f.orch);
                 } else {
                     dm.detach_observer();
                 }
@@ -571,6 +591,109 @@ TEST(SafetyCoreOrchestrator_Observer, IsSafetyEventObserverAndNoexcept) {
         SafetyEvent::DoseTargetReached)),
         "SafetyCoreOrchestrator::on_safety_event must be noexcept "
         "(SafetyEventObserver contract).");
+}
+
+// ============================================================================
+// UT-201-29: init_subsystems() で自己診断 1 項目 NG → Error 遷移 + InternalAssertion
+//             (Step 45 / CR-0031、SDD §6.1「SelfCheck → いずれか Fail → Error」+
+//              §4.2 公開 API 表 エラー処理欄「自己診断失敗時は InternalAssertion」).
+// ============================================================================
+//
+// 電子銃電流を許容差超過の値に inject し、UNIT-208 perform_self_check() の
+// 1 項目目 (電子銃電流確認) で Fail させる. init_subsystems() は SelfCheck → Error
+// へ遷移し、Result::error(InternalAssertion) を返す.
+TEST(SafetyCoreOrchestrator_InitSubsystems, SelfCheckFailTransitionsToError) {
+    OrchestratorFixture f;
+    // 電子銃電流 5.0 mA (許容差 0.01 mA を大幅超過) → 自己診断 1 項目目で Fail.
+    f.self_check.inject_electron_gun_current(ElectronGunCurrent_mA{5.0});
+
+    auto result = f.orch.init_subsystems();
+    ASSERT_FALSE(result.has_value());
+    // SDD §4.2 公開 API 表 エラー処理欄: 自己診断失敗時は InternalAssertion を返す.
+    EXPECT_EQ(result.error_code(), ErrorCode::InternalAssertion);
+    // SDD §6.1: SelfCheck → いずれか Fail → Error.
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Error);
+}
+
+// ============================================================================
+// UT-201-30: 自己診断失敗後、run_event_loop() はイベント未投入でも即座に 1 を返す
+//             (Step 45 / CR-0031、SDD §6.1「SelfCheck → Fail → Error → 即 shutdown()」).
+// ============================================================================
+//
+// init_subsystems() が自己診断失敗時に shutdown_requested_ をセットすることを、
+// run_event_loop() がイベント未投入でも即座に異常終了 (戻り値 1) することで検証.
+TEST(SafetyCoreOrchestrator_InitSubsystems, SelfCheckFailExitsEventLoopImmediately) {
+    OrchestratorFixture f;
+    f.self_check.inject_electron_gun_current(ElectronGunCurrent_mA{5.0});
+
+    ASSERT_FALSE(f.orch.init_subsystems().has_value());
+    ASSERT_EQ(f.orch.current_state(), LifecycleState::Error);
+
+    // shutdown_requested_ がセット済のため、イベント未投入でも即座に終了.
+    auto rc = f.orch.run_event_loop();
+    EXPECT_EQ(rc, 1);  // Error 状態で終了 → 異常終了.
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Error);
+}
+
+// ============================================================================
+// UT-201-31: 自己診断 4 項目それぞれの NG で Error 遷移する網羅機械検証
+//             (Step 45 / CR-0031、電子銃 NG は UT-201-29 で検証済のため、
+//              ターンテーブル / ベンディング磁石 / ドーズ積算の 3 項目を網羅).
+// ============================================================================
+TEST(SafetyCoreOrchestrator_InitSubsystems, SelfCheckFailFromEachCategory) {
+    // ターンテーブル NG (Light 位置でない = Electron 位置).
+    {
+        OrchestratorFixture f;
+        f.turntable.inject_sensor_readings(
+            kElectronPositionMm, kElectronPositionMm, kElectronPositionMm);
+        auto r = f.orch.init_subsystems();
+        ASSERT_FALSE(r.has_value());
+        EXPECT_EQ(r.error_code(), ErrorCode::InternalAssertion);
+        EXPECT_EQ(f.orch.current_state(), LifecycleState::Error);
+    }
+    // ベンディング磁石 NG (0 A でない).
+    {
+        OrchestratorFixture f;
+        f.bending_magnet.inject_actual_current(MagnetCurrent_A{1.0});
+        auto r = f.orch.init_subsystems();
+        ASSERT_FALSE(r.has_value());
+        EXPECT_EQ(r.error_code(), ErrorCode::InternalAssertion);
+        EXPECT_EQ(f.orch.current_state(), LifecycleState::Error);
+    }
+    // ドーズ積算カウンタ NG (累積 != 0).
+    {
+        OrchestratorFixture f;
+        f.self_check_dose.on_dose_pulse(PulseCount{100U});
+        auto r = f.orch.init_subsystems();
+        ASSERT_FALSE(r.has_value());
+        EXPECT_EQ(r.error_code(), ErrorCode::InternalAssertion);
+        EXPECT_EQ(f.orch.current_state(), LifecycleState::Error);
+    }
+}
+
+// ============================================================================
+// UT-201-32: 自己診断失敗後の二重呼出も InternalUnexpectedState を返す
+//             (Step 45 / CR-0031、失敗経路の idempotency 保護).
+// ============================================================================
+//
+// init_subsystems() が自己診断失敗で Error に遷移した後、再度 init_subsystems()
+// を呼んでも compare_exchange (expected = Init) が失敗するため
+// InternalUnexpectedState を返し、状態は Error のまま.
+TEST(SafetyCoreOrchestrator_InitSubsystems, SecondCallAfterSelfCheckFailReturnsInternalUnexpectedState) {
+    OrchestratorFixture f;
+    f.self_check.inject_electron_gun_current(ElectronGunCurrent_mA{5.0});
+
+    auto first = f.orch.init_subsystems();
+    ASSERT_FALSE(first.has_value());
+    EXPECT_EQ(first.error_code(), ErrorCode::InternalAssertion);
+    ASSERT_EQ(f.orch.current_state(), LifecycleState::Error);
+
+    // 状態は Error (Init でない) のため、二重呼出は compare_exchange 失敗 →
+    // InternalUnexpectedState. 状態は Error のまま.
+    auto second = f.orch.init_subsystems();
+    EXPECT_FALSE(second.has_value());
+    EXPECT_EQ(second.error_code(), ErrorCode::InternalUnexpectedState);
+    EXPECT_EQ(f.orch.current_state(), LifecycleState::Error);
 }
 
 }  // namespace th25_ctrl
